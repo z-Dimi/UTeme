@@ -45,6 +45,25 @@ try {
   assert.ok(orgIns.error, "no direct org insert");
   const prof = await a.c.from("profiles").select("id");
   assert.deepEqual(prof.data.map((p) => p.id), [a.id], "A sees only own profile");
+  // Aggregation RPCs and financial tables obey RLS too.
+  await admin.from("orders").insert({
+    organization_id: oa.organization_id, project_id: oa.project_id, provider: "custom", external_order_id: `o-${tag}`,
+    status: "approved", gross_amount: 10000, net_amount: 10000, ordered_at: "2026-06-01T12:00:00Z",
+    approved_at: "2026-06-01T12:00:00Z", raw_source: "custom",
+  });
+  const range = { p_from: "2026-06-01T00:00:00Z", p_to: "2026-06-02T00:00:00Z" };
+  const mine = await a.c.rpc("summary_totals", { p_project: oa.project_id, ...range }).single();
+  assert.equal(Number(mine.data.gross_revenue), 10000, "A sums its own orders");
+  const peek = await b.c.rpc("summary_totals", { p_project: oa.project_id, ...range }).single();
+  assert.equal(Number(peek.data.gross_revenue), 0, "B gets zeros for A's project");
+  const hourly = await b.c.rpc("hourly_results", { p_project: oa.project_id, ...range, p_tz: "America/Sao_Paulo" });
+  assert.equal((hourly.data ?? []).length, 0, "B sees no hourly data of A");
+  const orders = await b.c.from("orders").select("id");
+  assert.equal(orders.data.length, 0, "B cannot read A's orders");
+  const integ = await a.c.from("integrations").select("secret_encrypted");
+  assert.ok(integ.error, "secret column is not readable by clients");
+  const write = await a.c.from("orders").update({ gross_amount: 1 }).eq("project_id", oa.project_id).select();
+  assert.ok(write.error || write.data.length === 0, "clients cannot write orders");
   console.log("RLS isolation: all checks passed");
 } finally {
   await admin.from("organizations").delete().like("slug", `%-${tag}`);

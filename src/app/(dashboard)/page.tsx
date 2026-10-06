@@ -1,19 +1,179 @@
-import { Plug } from "lucide-react";
+import Link from "next/link";
+import { HourlyChart } from "@/components/charts/hourly-chart";
+import { MetricCard } from "@/components/dashboard/metric-card";
+import { PeriodFilter } from "@/components/dashboard/period-filter";
+import {
+  UNAVAILABLE,
+  formatCurrency,
+  formatNumber,
+  formatSignedCurrency,
+  formatSignedNumber,
+  formatSignedPercent,
+  getMetricColor,
+  getMetricSemantic,
+} from "@/lib/formatting";
+import { isPreset, resolvePeriod, type Preset } from "@/lib/dates";
+import { getSummary } from "@/server/services/summary";
+import { getWorkspace } from "@/server/services/workspace";
 
 export const metadata = { title: "Resumo" };
 
-export default function SummaryPage() {
-  return (
-    <section className="mx-auto max-w-3xl pt-10">
-      <div className="rounded-xl border border-border bg-card p-8 text-center">
-        <div className="mx-auto mb-3 grid h-9 w-9 place-items-center rounded-lg bg-surface text-muted">
-          <Plug className="h-4 w-4" aria-hidden />
-        </div>
-        <h2 className="text-base font-semibold">Nenhuma conta Meta conectada</h2>
-        <p className="mt-1 text-muted">
-          Conecte sua conta para começar. Os indicadores aparecem aqui assim que houver dados reais.
+const ymd = (d: Date, tz: string) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+
+export default async function SummaryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>;
+}) {
+  const sp = await searchParams;
+  const workspace = await getWorkspace();
+  const tz = workspace.activeProject.timezone;
+  const preset: Preset = isPreset(sp.period) ? sp.period : "last_7";
+  const period = resolvePeriod({ preset, tz, customFrom: sp.from, customTo: sp.to });
+
+  // Meta Ads is not connected yet: spend is "unavailable", not zero.
+  const result = await getSummary({ projectId: workspace.activeProject.id, period, adSpend: null, metaAdsTax: null });
+
+  const lastDay = new Date(period.to.getTime() - 1);
+  const filter = (
+    <PeriodFilter period={period} defaultFrom={ymd(period.from, tz)} defaultTo={ymd(lastDay, tz)} />
+  );
+
+  if ("error" in result) {
+    return (
+      <div className="space-y-4">
+        {filter}
+        <p role="alert" className="rounded-xl border border-border bg-card p-4 text-danger">
+          Não foi possível carregar o resumo. Tente novamente em instantes.
         </p>
       </div>
-    </section>
+    );
+  }
+
+  const { summary: s, hourly } = result;
+  const noAds = "Conecte a Meta Ads para calcular.";
+  const adsFormula = (text: string) => `${text} Requer investimento da Meta${s.adSpend === null ? " (não conectado)" : ""}.`;
+  const hasSales = s.approvedOrders + s.pendingOrders + s.refundOrders + s.chargebackOrders > 0;
+
+  return (
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Resumo</h2>
+          <p className="text-xs text-muted">
+            {period.label} · {ymd(period.from, tz)} a {ymd(lastDay, tz)} · fuso {tz}
+          </p>
+        </div>
+        {filter}
+      </header>
+
+      {!hasSales ? (
+        <div className="rounded-xl border border-border bg-card p-4 text-muted">
+          Nenhuma venda neste período.{" "}
+          <Link href="/integrations" className="text-info hover:underline">
+            Conecte uma plataforma de vendas
+          </Link>{" "}
+          ou escolha outro período.
+        </div>
+      ) : null}
+      {s.adSpend === null ? (
+        <div className="rounded-xl border border-border bg-card p-4 text-muted">
+          Nenhuma conta Meta conectada. Gastos, ROAS, lucro, ROI e margem aparecem como {UNAVAILABLE} até a conexão,
+          para não superestimar o resultado.
+        </div>
+      ) : null}
+
+      <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricCard
+          label="Faturamento Líquido"
+          value={formatCurrency(s.netRevenue)}
+          formula="Receita aprovada − reembolsos − chargebacks − taxas do gateway − impostos. Vendas aprovadas no período."
+          sub={`${formatNumber(s.approvedOrders)} vendas aprovadas`}
+        />
+        <MetricCard
+          label="Gastos com anúncios"
+          value={s.adSpend === null ? UNAVAILABLE : formatCurrency(s.adSpend)}
+          formula={`Soma do investimento (spend) da Meta Ads no período. ${s.adSpend === null ? noAds : ""}`}
+        />
+        <MetricCard
+          label="ROAS"
+          value={s.roas === null ? UNAVAILABLE : formatNumber(s.roas, 2)}
+          formula={adsFormula("Receita aprovada (após reembolsos e chargebacks) ÷ investimento em anúncios.")}
+        />
+        <MetricCard
+          label="Lucro"
+          value={formatSignedCurrency(s.profit)}
+          colorClass={getMetricColor(getMetricSemantic(s.profit))}
+          formula={adsFormula("Receita líquida − anúncios − imposto Meta − custos de produto − despesas.")}
+        />
+
+        <MetricCard
+          label="CPA"
+          value={UNAVAILABLE}
+          formula="Investimento ÷ compras atribuídas pela Meta. Requer Meta Ads conectada."
+        />
+        <MetricCard
+          label="Vendas Pendentes"
+          value={formatCurrency(s.pendingAmount)}
+          formula="Soma bruta dos pedidos ainda pendentes de pagamento, criados no período."
+          sub={`${formatNumber(s.pendingOrders)} pedidos`}
+        />
+        <MetricCard
+          label="ROI"
+          value={formatSignedNumber(s.roi)}
+          colorClass={getMetricColor(getMetricSemantic(s.roi))}
+          formula={adsFormula("Lucro ÷ custos totais (anúncios + imposto Meta + taxas + impostos + custos de produto + despesas).")}
+        />
+        <MetricCard
+          label="Custos de Produto"
+          value={formatCurrency(s.productCosts)}
+          formula="Soma dos custos de produto configurados em Taxas, congelados em cada venda aprovada."
+        />
+
+        <MetricCard
+          label="Imposto Meta Ads"
+          value={s.metaAdsTax === null ? UNAVAILABLE : formatCurrency(s.metaAdsTax)}
+          formula={`Percentual configurado em Taxas aplicado sobre o investimento em anúncios, não sobre o faturamento. ${s.adSpend === null ? noAds : ""}`}
+        />
+        <MetricCard
+          label="Vendas Reembolsadas"
+          value={formatSignedCurrency(-s.refunds)}
+          colorClass={s.refunds > 0 ? "text-danger" : "text-muted"}
+          formula="Valor reembolsado das vendas aprovadas no período. Chargebacks são contados à parte."
+          sub={`${formatNumber(s.refundOrders)} pedidos · chargeback ${formatSignedCurrency(-s.chargebacks)}`}
+        />
+        <MetricCard
+          label="Margem"
+          value={s.margin === null ? UNAVAILABLE : formatSignedPercent(s.margin)}
+          colorClass={getMetricColor(getMetricSemantic(s.margin))}
+          formula={adsFormula("Lucro ÷ receita líquida.")}
+        />
+        <MetricCard
+          label="Taxas"
+          value={formatCurrency(s.gatewayFees)}
+          formula="Soma das taxas de gateway resolvidas pelas regras de Taxas e congeladas em cada venda. Impostos sobre receita à parte."
+          sub={`impostos ${formatCurrency(s.taxes)}`}
+        />
+      </section>
+
+      <section aria-label="Resultado por horário" className="rounded-xl border border-border bg-card p-4">
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h3 className="text-[13px] font-semibold">Resultado por horário</h3>
+          <p className="text-[11px] text-muted">
+            Receita líquida − custo de produto por hora de aprovação. Investimento em anúncios não é rateado por hora.
+          </p>
+        </div>
+        {hourly.some((h) => h.orders > 0) ? (
+          <HourlyChart data={hourly} />
+        ) : (
+          <p className="py-10 text-center text-muted">Sem vendas aprovadas no período.</p>
+        )}
+      </section>
+
+      <p className="text-[11px] text-muted">
+        Valores agrupados pela data de aprovação da venda; um reembolso posterior altera o período da venda original.
+      </p>
+    </div>
   );
 }
