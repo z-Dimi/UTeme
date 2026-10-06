@@ -177,6 +177,39 @@ try {
   r = await post("custom", customId, customBody, { "x-webhook-timestamp": ts, "x-webhook-signature": sign(customSecret, ts, customBody) });
   assert.equal(r.json.duplicate, true);
 
+  // 12. fee engine: rules resolved at sale time and frozen in the order snapshot
+  const rule = (over) => ({
+    organization_id: org.id, project_id: proj.id, provider: "cakto", percentage: 0, fixed_amount: 0,
+    valid_from: "2026-01-01T00:00:00Z", ...over,
+  });
+  const { data: pixRule } = await db.from("fee_rules").insert(rule({ kind: "gateway_fee", name: "Cakto Pix", payment_method: "pix", percentage: 4.99, fixed_amount: 100 })).select("id").single();
+  await db.from("fee_rules").insert(rule({ kind: "gateway_fee", name: "Cakto default", percentage: 9 }));
+  await db.from("fee_rules").insert(rule({ kind: "tax", name: "Imposto 6%", provider: null, percentage: 6 }));
+  await db.from("fee_rules").insert(rule({ kind: "product_cost", name: "Custo", external_product_id: `prod-${tag}`, fixed_amount: 3500 }));
+
+  const feeOrder = randomUUID();
+  r = await sendCakto(caktoId, caktoSecret, "purchase_approved", caktoOrder(feeOrder));
+  assert.equal(r.json.status, "processed");
+  let fo = await getOrder(feeOrder);
+  // 4,99% of 197,00 = 9,83 + 1,00 fixed; tax 6% = 11,82; product cost 35,00
+  assert.deepEqual(
+    [fo.gateway_fee_amount, fo.tax_amount, fo.product_cost_amount, fo.net_amount, fo.fee_rule_id],
+    [1083, 1182, 3500, 19700 - 1083 - 1182, pixRule.id],
+    "pix rule (specific) beats the default rule; amounts match the spec formulas",
+  );
+  assert.equal(fo.fee_snapshot.inputs.feePercentage, 4.99);
+
+  // changing the rate later never touches the old sale
+  await db.from("fee_rules").update({ valid_until: new Date().toISOString() }).eq("id", pixRule.id);
+  await db.from("fee_rules").insert(rule({ kind: "gateway_fee", name: "Cakto Pix v2", payment_method: "pix", percentage: 5.49, valid_from: new Date(Date.now() + 1000).toISOString().slice(0, 19) + "Z" }));
+  fo = await getOrder(feeOrder);
+  assert.equal(fo.gateway_fee_amount, 1083, "historical fee frozen");
+
+  // refund reverses revenue and tax; gateway fee stays
+  r = await sendCakto(caktoId, caktoSecret, "refund", caktoOrder(feeOrder));
+  fo = await getOrder(feeOrder);
+  assert.deepEqual([fo.status, fo.tax_amount, fo.net_amount], ["refunded", 0, -1083]);
+
   console.log("Webhook e2e: all checks passed against", BASE_URL);
 } finally {
   if (created.orgId) await db.from("organizations").delete().eq("id", created.orgId);

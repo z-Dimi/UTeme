@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { calculateNetRevenue, type PeriodTotals } from "@/lib/finance";
 import { resolveTransition, type OrderStatus } from "@/lib/finance/order-state";
 import type { NormalizedOrderEvent } from "@/server/adapters/types";
+import { computeOrderFinancials, loadRules } from "./fee-rules";
 
 export type Scope = { organizationId: string; projectId: string; integrationId: string };
 export type ApplyResult = { result: "applied" | "noop" | "rejected"; orderId: string; from: OrderStatus | null; to: OrderStatus };
@@ -36,15 +37,21 @@ function netAmount(row: { gross: number; fee: number; tax: number; refund: numbe
   return calculateNetRevenue(totals);
 }
 
-/** Columns that depend on the target status. Refunds/chargebacks are full-amount (gateways send no partials we model). */
+/**
+ * Columns that depend on the target status. Refunds/chargebacks are full-amount (gateways send no
+ * partials we model). Revenue tax is reversed with the revenue; the gateway fee is not (gateways
+ * normally keep it). The original tax stays in fee_snapshot for audit.
+ */
 function statusColumns(order: { gross: number; fee: number; tax: number }, status: OrderStatus, occurredAt: string) {
   const refund = status === "refunded" ? order.gross : 0;
   const chargeback = status === "chargeback" ? order.gross : 0;
+  const tax = refund > 0 || chargeback > 0 ? 0 : order.tax;
   return {
     status,
     refund_amount: refund,
     chargeback_amount: chargeback,
-    net_amount: netAmount({ ...order, refund, chargeback }),
+    tax_amount: tax,
+    net_amount: netAmount({ ...order, tax, refund, chargeback }),
     ...(status === "approved" ? { approved_at: occurredAt } : {}),
     ...(status === "refunded" ? { refunded_at: occurredAt } : {}),
     ...(status === "chargeback" ? { chargeback_at: occurredAt } : {}),
@@ -152,7 +159,8 @@ export async function applyOrderEvent(
         upsertCustomer(db, scope, event),
         upsertProducts(db, scope, event),
       ]);
-      const base = { gross: event.grossAmount, fee: 0, tax: 0 };
+      const fin = computeOrderFinancials(await loadRules(db, scope.projectId), event);
+      const base = { gross: event.grossAmount, fee: fin.gatewayFeeAmount, tax: fin.taxAmount };
       const { data, error } = await db
         .from("orders")
         .insert({
@@ -167,6 +175,10 @@ export async function applyOrderEvent(
           gross_amount: event.grossAmount,
           discount_amount: event.discountAmount,
           customer_id: customerId,
+          gateway_fee_amount: fin.gatewayFeeAmount,
+          product_cost_amount: fin.productCostAmount,
+          fee_rule_id: fin.feeRuleId,
+          fee_snapshot: fin.snapshot,
           tracking: event.tracking,
           ordered_at: event.occurredAt,
           raw_source: event.provider,
@@ -203,11 +215,24 @@ export async function applyOrderEvent(
       return { result, orderId: existing.id, from: existing.status, to: event.status };
     }
 
-    const cols = statusColumns(
-      { gross: existing.gross_amount, fee: existing.gateway_fee_amount, tax: existing.tax_amount },
-      decision.to,
-      event.occurredAt,
-    );
+    // Financials are (re)resolved when the sale becomes approved, using the approval instant and the
+    // final payment method; from then on they are frozen. Later refunds only reverse revenue.
+    let frozen: Record<string, unknown> = {};
+    let money = { gross: existing.gross_amount, fee: existing.gateway_fee_amount, tax: existing.tax_amount };
+    if (decision.to === "approved") {
+      const fin = computeOrderFinancials(await loadRules(db, scope.projectId), event);
+      money = { gross: event.grossAmount, fee: fin.gatewayFeeAmount, tax: fin.taxAmount };
+      frozen = {
+        gross_amount: event.grossAmount,
+        payment_method: event.paymentMethod ?? null,
+        installments: event.installments ?? null,
+        gateway_fee_amount: fin.gatewayFeeAmount,
+        product_cost_amount: fin.productCostAmount,
+        fee_rule_id: fin.feeRuleId,
+        fee_snapshot: fin.snapshot,
+      };
+    }
+    const cols = { ...frozen, ...statusColumns(money, decision.to, event.occurredAt) };
     const { data: updated, error } = await db
       .from("orders")
       .update(cols)

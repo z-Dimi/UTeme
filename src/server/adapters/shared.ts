@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { decimalToCents } from "@/lib/money";
 import { AdapterError, type VerifyResult } from "./types";
 
 export const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
@@ -40,13 +41,7 @@ export function toCents(value: unknown, field: string): number {
   const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
   if (!Number.isFinite(n)) throw new AdapterError(`${field} is not a valid amount`);
 
-  // Work on the decimal text, not on n * 100: 1.005 * 100 === 100.49999999999999.
-  const text = (Math.abs(n) < 1e-6 || Math.abs(n) >= 1e21 ? Math.abs(n).toFixed(6) : String(Math.abs(n)));
-  const [int, frac = ""] = text.split(".");
-  const digits = frac.padEnd(3, "0");
-  let cents = Number(int) * 100 + Number(digits.slice(0, 2));
-  if (digits.charCodeAt(2) >= 53) cents += 1; // third decimal >= 5 rounds half up
-  return n < 0 && cents > 0 ? -cents : cents;
+  return decimalToCents(n);
 }
 
 export function normalizeEmail(value: unknown): string | undefined {

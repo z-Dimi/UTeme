@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Meta Ads", href: "/meta", icon: BarChart3, soon: true },
   { label: "Vendas", href: "/sales", icon: ShoppingCart },
   { label: "Integrações", href: "/integrations", icon: Plug },
-  { label: "Taxas", href: "/fees", icon: Receipt, soon: true },
+  { label: "Taxas", href: "/fees", icon: Receipt },
   { label: "Despesas", href: "/expenses", icon: Wallet, soon: true },
   { label: "Relatórios", href: "/reports", icon: FileText, soon: true },
   { label: "Eventos", href: "/events", icon: Zap, soon: true },
