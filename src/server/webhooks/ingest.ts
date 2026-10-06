@@ -1,7 +1,7 @@
 import "server-only";
 import { decryptSecret, sha256Hex } from "@/lib/crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdapter, type ProviderKey } from "@/server/adapters";
+import { getAdapter, isProviderKey, type ProviderKey } from "@/server/adapters";
 import { sanitize } from "@/server/adapters/shared";
 import { AdapterError, type ParseResult } from "@/server/adapters/types";
 import { applyOrderEvent } from "@/server/services/apply-order-event";
@@ -115,6 +115,22 @@ export async function ingestWebhook(args: {
     webhookEventId = inserted.id;
   }
 
+  return processParsed(db, scope, provider, parsed, parseError, webhookEventId);
+}
+
+type Db = ReturnType<typeof createAdminClient>;
+type Scope = { organizationId: string; projectId: string; integrationId: string };
+
+/** Applies an already persisted webhook event and records the outcome. Shared by ingest and reprocess. */
+async function processParsed(
+  db: Db,
+  scope: Scope,
+  provider: ProviderKey,
+  parsed: ParseResult | null,
+  parseError: string | null,
+  webhookEventId: string,
+): Promise<IngestResponse> {
+  const { integrationId } = scope;
   const finish = (status: "processed" | "ignored" | "failed", error?: string) =>
     db
       .from("webhook_events")
@@ -150,4 +166,41 @@ export async function ingestWebhook(args: {
     await finish("failed", message);
     return { status: 200, body: { received: true, status: "failed" } };
   }
+}
+
+/**
+ * Re-runs a failed event through the same pipeline from the stored (sanitized) payload.
+ * The original payload is never edited; only status/attempt_count/error change.
+ */
+export async function reprocessWebhookEvent(args: { eventId: string; projectId: string }): Promise<IngestResponse> {
+  const db = createAdminClient();
+  const { data: ev } = await db
+    .from("webhook_events")
+    .select("id, organization_id, project_id, integration_id, provider, payload, status, attempt_count")
+    .eq("id", args.eventId)
+    .eq("project_id", args.projectId)
+    .maybeSingle();
+  if (!ev) return { status: 404, body: { error: "not_found" } };
+  if (ev.status !== "failed") return { status: 409, body: { error: "only_failed_events_can_be_reprocessed" } };
+  if (!isProviderKey(ev.provider)) return { status: 422, body: { error: "unknown_provider" } };
+
+  // Compare-and-set so two clicks cannot run the same event twice.
+  const { data: claimed } = await db
+    .from("webhook_events")
+    .update({ status: "processing", attempt_count: ev.attempt_count + 1, error_message: null })
+    .eq("id", ev.id)
+    .eq("status", "failed")
+    .select("id");
+  if (!claimed?.length) return { status: 409, body: { error: "already_processing" } };
+
+  let parsed: ParseResult | null = null;
+  let parseError: string | null = null;
+  try {
+    parsed = getAdapter(ev.provider).parse(JSON.stringify(ev.payload));
+  } catch (e) {
+    if (!(e instanceof AdapterError)) throw e;
+    parseError = e.message;
+  }
+  const scope = { organizationId: ev.organization_id, projectId: ev.project_id, integrationId: ev.integration_id };
+  return processParsed(db, scope, ev.provider, parsed, parseError, ev.id);
 }

@@ -28,7 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Taxas", href: "/fees", icon: Receipt },
   { label: "Despesas", href: "/expenses", icon: Wallet, soon: true },
   { label: "Relatórios", href: "/reports", icon: FileText, soon: true },
-  { label: "Eventos", href: "/events", icon: Zap, soon: true },
+  { label: "Eventos", href: "/events", icon: Zap },
   { label: "Notificações", href: "/notifications", icon: Bell, soon: true },
   { label: "Configurações", href: "/settings", icon: Settings, soon: true },
 ];
