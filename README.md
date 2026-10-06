@@ -51,6 +51,12 @@ Regras visuais de ROI/lucro (sinal sempre visível, verde/vermelho/neutro, `—`
 
 ## Status
 
-Fase 1 (fundação) concluída: auth, organização/projeto com RLS, shell do dashboard, formatação central.
-Próximas: financeiro (pedidos/webhooks), tax engine, conexão e sync Meta, dashboard, funil.
-Itens ainda não implementados aparecem como "Em breve" na sidebar.
+Implementado e testado: auth, organizações/projetos com RLS, webhooks Cakto e personalizado (HMAC, idempotência, state
+machine), pedidos com snapshot financeiro, motor de taxas/impostos/custos com simulador, resumo (receita líquida,
+reembolsos, taxas, pendentes, resultado por horário), despesas, relatórios CSV, eventos com reprocessamento e
+notificações.
+
+Depende de credenciais/decisões: conexão Meta Ads (OAuth, sincronização, métricas, funil), Krowk Pay (precisa da
+documentação do webhook). Itens ainda não disponíveis aparecem como "Em breve" ou `—`.
+
+Veja `docs/ARCHITECTURE.md`, `docs/WEBHOOKS.md`, `docs/FINANCE.md` e `docs/DEPLOYMENT.md`.

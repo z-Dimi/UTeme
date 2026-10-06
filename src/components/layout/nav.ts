@@ -30,5 +30,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Relatórios", href: "/reports", icon: FileText },
   { label: "Eventos", href: "/events", icon: Zap },
   { label: "Notificações", href: "/notifications", icon: Bell },
-  { label: "Configurações", href: "/settings", icon: Settings, soon: true },
+  { label: "Configurações", href: "/settings", icon: Settings },
 ];

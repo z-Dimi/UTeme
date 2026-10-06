@@ -91,7 +91,11 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
                 return (
                   <tr key={o.id} className="border-b border-border last:border-0 hover:bg-card-hover">
                     <td className="whitespace-nowrap px-3 py-2.5 text-muted">{fmtDate(o.ordered_at)}</td>
-                    <td className="px-3 py-2.5 font-mono text-xs">{o.external_order_id.slice(0, 8)}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs">
+                      <Link href={`/sales/${o.id}`} className="text-info hover:underline">
+                        {o.external_order_id.slice(0, 8)}
+                      </Link>
+                    </td>
                     <td className="max-w-[200px] truncate px-3 py-2.5">{o.customers?.name ?? o.customers?.email ?? "—"}</td>
                     <td className="max-w-[200px] truncate px-3 py-2.5">{o.order_items[0]?.name ?? "—"}</td>
                     <td className="px-3 py-2.5 text-muted">{o.payment_method ?? "—"}</td>
