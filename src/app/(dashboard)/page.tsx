@@ -13,6 +13,8 @@ import {
   getMetricSemantic,
 } from "@/lib/formatting";
 import { isPreset, resolvePeriod, type Preset } from "@/lib/dates";
+import { FunnelCard } from "@/features/funnel/funnel-card";
+import { getConversionFunnel } from "@/lib/funnel";
 import { getSummary } from "@/server/services/summary";
 import { getWorkspace } from "@/server/services/workspace";
 
@@ -157,6 +159,8 @@ export default async function SummaryPage({
           sub={`impostos ${formatCurrency(s.taxes)}`}
         />
       </section>
+
+      <FunnelCard stages={getConversionFunnel(null, s.approvedOrders)} />
 
       <section aria-label="Resultado por horário" className="rounded-xl border border-border bg-card p-4">
         <div className="mb-2 flex items-baseline justify-between gap-2">

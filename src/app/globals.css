@@ -17,6 +17,14 @@
   --warning: #fbbf24;
   --info: #60a5fa;
   --radius: 10px;
+  /* Funnel / chart palette: blue -> blue-violet -> violet (no rainbow, no semantic green/red) */
+  --chart-1: #3b82f6;
+  --chart-2: #5b7cf5;
+  --chart-3: #7c75f0;
+  --chart-4: #8b6cf0;
+  --chart-5: #a06af0;
+  --chart-grid: rgb(255 255 255 / 0.07);
+  --chart-line-primary: rgb(255 255 255 / 0.25);
 }
 
 @theme inline {
@@ -29,6 +37,7 @@
   --color-border-hover: var(--border-hover);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-success: var(--success);
