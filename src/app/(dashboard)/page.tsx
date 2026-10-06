@@ -33,7 +33,7 @@ export default async function SummaryPage({
   const period = resolvePeriod({ preset, tz, customFrom: sp.from, customTo: sp.to });
 
   // Meta Ads is not connected yet: spend is "unavailable", not zero.
-  const result = await getSummary({ projectId: workspace.activeProject.id, period, adSpend: null, metaAdsTax: null });
+  const result = await getSummary({ projectId: workspace.activeProject.id, period, adSpend: null, metaAdsTax: null, tz });
 
   const lastDay = new Date(period.to.getTime() - 1);
   const filter = (
@@ -106,6 +106,7 @@ export default async function SummaryPage({
           value={formatSignedCurrency(s.profit)}
           colorClass={getMetricColor(getMetricSemantic(s.profit))}
           formula={adsFormula("Receita líquida − anúncios − imposto Meta − custos de produto − despesas.")}
+          sub={`despesas ${formatCurrency(s.expenses)}`}
         />
 
         <MetricCard

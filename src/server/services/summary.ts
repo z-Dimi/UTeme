@@ -44,9 +44,18 @@ export async function getSummary(args: {
   period: Period;
   adSpend: number | null;
   metaAdsTax: number | null;
+  tz: string;
 }): Promise<{ summary: Summary; hourly: HourlyPoint[] } | { error: string }> {
   const supabase = await createClient();
-  const { projectId, period, adSpend, metaAdsTax } = args;
+  const { projectId, period, adSpend, metaAdsTax, tz } = args;
+  const localDate = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  const { data: expensesTotal, error: expensesError } = await supabase.rpc("expenses_total", {
+    p_project: projectId,
+    p_from: localDate(period.from),
+    p_to: localDate(period.to),
+  });
+  if (expensesError) return { error: expensesError.message };
 
   const { data, error } = await supabase
     .rpc("summary_totals", { p_project: projectId, p_from: period.from.toISOString(), p_to: period.to.toISOString() })
@@ -62,7 +71,7 @@ export async function getSummary(args: {
     productCosts: n(data.product_costs),
     adSpend: adSpend ?? 0,
     metaAdsTax: metaAdsTax ?? 0,
-    expenses: 0, // expenses module not implemented yet
+    expenses: n(expensesTotal),
   };
 
   const cashRevenue = calculateCashRevenue(t);

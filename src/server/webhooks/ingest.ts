@@ -5,6 +5,7 @@ import { getAdapter, isProviderKey, type ProviderKey } from "@/server/adapters";
 import { sanitize } from "@/server/adapters/shared";
 import { AdapterError, type ParseResult } from "@/server/adapters/types";
 import { applyOrderEvent } from "@/server/services/apply-order-event";
+import { notify } from "@/server/services/notify";
 
 export type IngestResponse = { status: number; body: Record<string, unknown> };
 
@@ -137,8 +138,19 @@ async function processParsed(
       .update({ status, error_message: error ?? null, processed_at: new Date().toISOString() })
       .eq("id", webhookEventId);
 
+  const alertFailure = (message: string) =>
+    notify(db, scope, {
+      type: "webhook_failed",
+      title: "Webhook com erro",
+      body: message.slice(0, 300),
+      link: `/events/${webhookEventId}`,
+      dedupeKey: `webhook_failed:${webhookEventId}`,
+    });
+
   if (!parsed) {
-    await finish("failed", parseError ?? "invalid payload");
+    const message = parseError ?? "invalid payload";
+    await finish("failed", message);
+    await alertFailure(message);
     return { status: 200, body: { received: true, status: "failed" } };
   }
   if (parsed.kind === "ignored") {
@@ -152,6 +164,17 @@ async function processParsed(
     for (const event of parsed.events) {
       results.push(await applyOrderEvent(db, scope, event, webhookEventId));
     }
+    for (const r of results) {
+      if (r.result === "applied" && r.to === "chargeback") {
+        await notify(db, scope, {
+          type: "chargeback_received",
+          title: "Chargeback recebido",
+          body: "Um pedido recebeu chargeback e foi removido da receita líquida.",
+          link: "/sales",
+          dedupeKey: `chargeback:${r.orderId}`,
+        });
+      }
+    }
     const rejected = results.find((r) => r.result === "rejected");
     if (rejected) {
       await finish("ignored", `status regression blocked: ${rejected.from} -> ${rejected.to}`);
@@ -164,6 +187,7 @@ async function processParsed(
     const message = e instanceof Error ? e.message : "unknown error";
     console.error("[webhook] processing failed", { provider, integrationId, webhookEventId, message });
     await finish("failed", message);
+    await alertFailure(message);
     return { status: 200, body: { received: true, status: "failed" } };
   }
 }

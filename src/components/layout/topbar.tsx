@@ -1,10 +1,11 @@
-import { LogOut } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
+import Link from "next/link";
 import { logout } from "@/features/auth/actions";
 import { switchProject } from "@/features/onboarding/switch-project";
 import { Button } from "@/components/ui/button";
 import type { Workspace } from "@/server/services/workspace";
 
-export function Topbar({ workspace }: { workspace: Workspace }) {
+export function Topbar({ workspace, unread }: { workspace: Workspace; unread: number }) {
   const { projects, activeProject, activeOrganization, user } = workspace;
 
   return (
@@ -45,6 +46,14 @@ export function Topbar({ workspace }: { workspace: Workspace }) {
           </form>
         ) : null}
 
+        <Link
+          href="/notifications"
+          aria-label={unread > 0 ? `Notificações (${unread} novas)` : "Notificações"}
+          className="relative grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-card-hover hover:text-foreground"
+        >
+          <Bell className="h-4 w-4" aria-hidden />
+          {unread > 0 ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger" aria-hidden /> : null}
+        </Link>
         <span className="hidden text-xs text-muted md:inline" title={user.email}>
           {user.fullName}
         </span>

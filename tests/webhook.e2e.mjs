@@ -210,6 +210,19 @@ try {
   fo = await getOrder(feeOrder);
   assert.deepEqual([fo.status, fo.tax_amount, fo.net_amount], ["refunded", 0, -1083]);
 
+  // 13. alerts: failed webhook and chargeback each notified exactly once
+  const { data: notes } = await db.from("notifications").select("type").eq("project_id", proj.id);
+  const types = notes.map((x) => x.type);
+  assert.ok(types.includes("webhook_failed"), "failure notification created");
+  assert.equal(types.filter((x) => x === "chargeback_received").length, 1, "one chargeback notification");
+
+  // 14. expenses reduce profit inputs through the RPC (service role bypasses RLS; math only)
+  await db.from("expenses").insert({ organization_id: org.id, project_id: proj.id, name: "Criativo", category: "creative", amount: 25000, incurred_on: "2026-06-01" });
+  const { data: exp } = await db.rpc("expenses_total", { p_project: proj.id, p_from: "2026-06-01", p_to: "2026-06-02" });
+  assert.equal(Number(exp), 25000);
+  const { data: none } = await db.rpc("expenses_total", { p_project: proj.id, p_from: "2026-06-02", p_to: "2026-06-03" });
+  assert.equal(Number(none), 0);
+
   console.log("Webhook e2e: all checks passed against", BASE_URL);
 } finally {
   if (created.orgId) await db.from("organizations").delete().eq("id", created.orgId);
