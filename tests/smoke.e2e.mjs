@@ -168,6 +168,8 @@ try {
   // branding: logo in the sidebar (and not the organization name there), on the login page, plus favicon
   assert.ok(summary.includes('alt="UTeme"'), "sidebar shows the UTeme logo");
   assert.ok(!summary.includes("Smoke Org"), "organization name no longer shown in the sidebar header");
+  assert.ok(!summary.includes("Faturamento bruto acumulado:"), "goal card has no redundant accumulated line");
+  assert.ok(summary.includes("bg-success transition-"), "goal progress bar is green");
   const login = await fetch(`${BASE_URL}/login`).then((r) => r.text());
   assert.ok(login.includes('alt="UTeme"'), "login shows the UTeme logo");
   const icon = await fetch(`${BASE_URL}/icon.png`);

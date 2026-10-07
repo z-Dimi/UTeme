@@ -42,15 +42,15 @@ function GoalCard({ currentCents, goalCents }: SidebarProps["goal"]) {
         aria-valuenow={Math.min(currentCents, goalCents)}
         className="h-1.5 overflow-hidden rounded-full bg-surface"
       >
-        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${width}%` }} />
+        <div className="h-full rounded-full bg-success transition-[width] duration-500" style={{ width: `${width}%` }} />
       </div>
       <div className="flex items-baseline justify-between text-[11px] text-muted">
-        <span>R$ 0</span>
+        {/* Left end shows the real gross revenue accumulated so far (not a fixed "R$ 0"). */}
+        <span className="tabular-nums text-foreground" title="Faturamento bruto acumulado">
+          {formatCurrency(currentCents)}
+        </span>
         <span>{formatCompactCurrency(goalCents)}</span>
       </div>
-      <p className="text-[11px] text-muted">
-        Faturamento bruto acumulado: <span className="tabular-nums text-foreground">{formatCurrency(currentCents)}</span>
-      </p>
     </div>
   );
 }
