@@ -38,14 +38,15 @@ async function loadConn(): Promise<MetaConnection> {
   return data as unknown as MetaConnection;
 }
 
-function must<T>(res: { data: T | null; error: { message: string } | null }, what: string): T {
+function must<T>(res: { data: T; error: { message: string } | null }, what: string): NonNullable<T> {
   if (res.error || !res.data) throw new Error(`${what}: ${res.error?.message ?? "no data"}`);
-  return res.data;
+  return res.data as NonNullable<T>;
 }
 
 beforeAll(async () => {
   const u = await db.auth.admin.createUser({ email: `meta-${tag}@example.test`, password: `Pw-${tag}-xx`, email_confirm: true });
-  userId = must(u, "createUser").user.id;
+  if (u.error || !u.data.user) throw new Error(`createUser: ${u.error?.message ?? "no user"}`);
+  userId = u.data.user.id;
   orgId = must(await db.from("organizations").insert({ name: "Meta Org", slug: `meta-${tag}`, created_by: userId }).select("id").single(), "org").id;
   projectId = must(await db.from("projects").insert({ organization_id: orgId, name: "Meta Proj" }).select("id").single(), "project").id;
   connId = must(
