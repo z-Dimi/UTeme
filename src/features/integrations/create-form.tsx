@@ -30,8 +30,8 @@ export function CreateIntegrationForm({ appUrl }: { appUrl: string }) {
           <Input name="name" placeholder="Ex.: Cakto — Produto X" required />
         </Field>
         {provider === "cakto" ? (
-          <Field label="Secret do webhook (Cakto)" error={state.fieldErrors?.secret}>
-            <Input name="secret" type="password" autoComplete="off" placeholder="Cole o secret gerado pela Cakto" />
+          <Field label="Secret da Cakto (opcional agora)" error={state.fieldErrors?.secret}>
+            <Input name="secret" type="password" autoComplete="off" placeholder="Deixe vazio e cole depois" />
           </Field>
         ) : (
           <p className="pb-2 text-xs text-muted">Geramos um secret para você ao criar.</p>
@@ -60,6 +60,12 @@ export function CreateIntegrationForm({ appUrl }: { appUrl: string }) {
               <p className="text-warning">Guarde este secret agora. Ele não será exibido novamente.</p>
               <code className="block break-all rounded bg-card px-2 py-1.5 text-foreground">{state.created.secret}</code>
             </>
+          ) : null}
+          {state.created.provider === "cakto" && !state.created.secretProvided ? (
+            <p className="text-muted">
+              Próximo passo: crie o webhook na Cakto com esta URL, copie o secret que a Cakto gerar e cole na integração
+              abaixo (campo “Definir secret”). Até lá, as vendas não são aceitas.
+            </p>
           ) : null}
         </div>
       ) : null}

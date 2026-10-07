@@ -40,13 +40,18 @@ export async function ingestWebhook(args: {
 
   const { data: integration, error: intError } = await db
     .from("integrations")
-    .select("id, organization_id, project_id, secret_encrypted, status")
+    .select("id, organization_id, project_id, secret_encrypted, secret_configured, status")
     .eq("id", integrationId)
     .eq("provider", provider)
     .maybeSingle();
   // Same answer for "does not exist" and "inactive": no enumeration.
   if (intError || !integration || integration.status !== "active") {
     return { status: 404, body: { error: "not_found" } };
+  }
+  // The gateway secret has not been pasted yet: nothing can be authenticated, so nothing is accepted.
+  if (!integration.secret_configured) {
+    console.warn("[webhook] rejected", { provider, integrationId, reason: "secret_not_configured" });
+    return { status: 401, body: { error: "unauthorized" } };
   }
 
   const verification = adapter.verify({ rawBody, headers, secret: decryptSecret(integration.secret_encrypted) });

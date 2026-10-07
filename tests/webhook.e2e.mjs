@@ -177,6 +177,15 @@ try {
   r = await post("custom", customId, customBody, { "x-webhook-timestamp": ts, "x-webhook-signature": sign(customSecret, ts, customBody) });
   assert.equal(r.json.duplicate, true);
 
+  // 11b. an integration whose secret is not set yet (created before the gateway reveals it) accepts nothing
+  const pendingId = await mkIntegration("cakto", "ignored-placeholder");
+  await db.from("integrations").update({ secret_configured: false }).eq("id", pendingId);
+  r = await sendCakto(pendingId, "ignored-placeholder", "purchase_approved", caktoOrder(randomUUID()));
+  assert.equal(r.status, 401, "awaiting-secret integration rejects even a correctly signed delivery");
+  await db.from("integrations").update({ secret_configured: true }).eq("id", pendingId);
+  r = await sendCakto(pendingId, "ignored-placeholder", "purchase_approved", caktoOrder(randomUUID()));
+  assert.equal(r.json.status, "processed", "accepted once the secret is configured");
+
   // 12. fee engine: rules resolved at sale time and frozen in the order snapshot
   const rule = (over) => ({
     organization_id: org.id, project_id: proj.id, provider: "cakto", percentage: 0, fixed_amount: 0,
