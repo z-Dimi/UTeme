@@ -14,6 +14,8 @@ import {
 } from "@/lib/formatting";
 import { isPreset, resolvePeriod, type Preset } from "@/lib/dates";
 import { FunnelCard } from "@/features/funnel/funnel-card";
+import { ProductsCard, type ProductSale } from "@/features/funnel/products-card";
+import { createClient } from "@/lib/supabase/server";
 import { getConversionFunnel } from "@/lib/funnel";
 import { calculateCPA } from "@/lib/finance";
 import { getMetaPeriod } from "@/server/services/meta-summary";
@@ -68,6 +70,19 @@ export default async function SummaryPage({
   const noAds = "Conecte a Meta Ads para calcular.";
   const adsFormula = (text: string) => `${text} Requer investimento da Meta${s.adSpend === null ? " (não conectado)" : ""}.`;
   const hasSales = s.approvedOrders + s.pendingOrders + s.refundOrders + s.chargebackOrders > 0;
+  // One result color for the profit family: green when the operation is profitable, red when it loses money.
+  const profitColor = getMetricColor(getMetricSemantic(s.profit));
+
+  const supabase = await createClient();
+  const { data: productRows } = await supabase.rpc("product_sales", {
+    p_project: workspace.activeProject.id,
+    p_from: period.from.toISOString(),
+    p_to: period.to.toISOString(),
+  });
+  const products: ProductSale[] = ((productRows ?? []) as { name: string; quantity: number | string }[]).map((r) => ({
+    name: r.name,
+    quantity: Number(r.quantity),
+  }));
 
   return (
     <div className="space-y-5">
@@ -128,6 +143,7 @@ export default async function SummaryPage({
         <MetricCard
           label="ROAS"
           value={s.roas === null ? UNAVAILABLE : formatNumber(s.roas, 2)}
+          colorClass={profitColor}
           loading={importing}
           formula={adsFormula("Receita aprovada (após reembolsos e chargebacks) ÷ investimento em anúncios (ROAS Cash). O ROAS Meta usa o valor de compra atribuído pela Meta.")}
           sub={ready && ready.totals.spend > 0 ? `ROAS Meta ${formatNumber(ready.totals.purchaseValue / ready.totals.spend, 2)}` : undefined}
@@ -135,7 +151,7 @@ export default async function SummaryPage({
         <MetricCard
           label="Lucro"
           value={formatSignedCurrency(s.profit)}
-          colorClass={getMetricColor(getMetricSemantic(s.profit))}
+          colorClass={profitColor}
           loading={importing}
           formula={adsFormula("Receita líquida − anúncios − imposto Meta − custos de produto − despesas.")}
           sub={`despesas ${formatCurrency(s.expenses)}`}
@@ -157,7 +173,7 @@ export default async function SummaryPage({
         <MetricCard
           label="ROI"
           value={formatSignedNumber(s.roi)}
-          colorClass={getMetricColor(getMetricSemantic(s.roi))}
+          colorClass={profitColor}
           loading={importing}
           formula={adsFormula("Lucro ÷ custos totais (anúncios + imposto Meta + taxas + impostos + custos de produto + despesas).")}
         />
@@ -183,7 +199,7 @@ export default async function SummaryPage({
         <MetricCard
           label="Margem"
           value={s.margin === null ? UNAVAILABLE : formatSignedPercent(s.margin)}
-          colorClass={getMetricColor(getMetricSemantic(s.margin))}
+          colorClass={profitColor}
           loading={importing}
           formula={adsFormula("Lucro ÷ receita líquida.")}
         />
@@ -195,19 +211,22 @@ export default async function SummaryPage({
         />
       </section>
 
-      <FunnelCard
-        stages={getConversionFunnel(
-          ready
-            ? {
-                clicks: ready.totals.linkClicks,
-                landingPageViews: ready.totals.landingPageViews,
-                initiateCheckouts: ready.totals.initiateCheckouts,
-                metaPurchases: ready.totals.purchases,
-              }
-            : null,
-          s.approvedOrders,
-        )}
-      />
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <FunnelCard
+          stages={getConversionFunnel(
+            ready
+              ? {
+                  clicks: ready.totals.linkClicks,
+                  landingPageViews: ready.totals.landingPageViews,
+                  initiateCheckouts: ready.totals.initiateCheckouts,
+                  metaPurchases: ready.totals.purchases,
+                }
+              : null,
+            s.approvedOrders,
+          )}
+        />
+        <ProductsCard products={products} />
+      </div>
 
       <section aria-label="Resultado por horário" className="rounded-xl border border-border bg-card p-4">
         <div className="mb-2 flex items-baseline justify-between gap-2">

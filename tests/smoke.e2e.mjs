@@ -118,7 +118,7 @@ try {
 
   // ---------------------------------------------------------------- every screen
   const pages = [
-    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão"]],
+    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão", "Produtos", "Produto Smoke"]],
     ["/?period=today", ["Resumo", "Hoje"]],
     ["/?period=last_30", ["Resumo", "Últimos 30 dias"]],
     ["/?period=custom&from=2026-01-01&to=2026-12-31", ["Resumo"]],
@@ -150,6 +150,9 @@ try {
   assert.ok(summary.includes("R$ 200,00"), "summary shows ad spend");
   assert.ok(summary.includes("R$ 24,30"), "summary applies Meta ads tax to spend");
   assert.ok(summary.includes("ROAS Meta 5,00"), "ROAS Meta = 1000 / 200");
+  // Seeded operation loses money: profit, ROAS, ROI and margin all share the same (red) result color.
+  const redCards = (summary.match(/tracking-tight text-danger/g) ?? []).length;
+  assert.ok(redCards >= 4, `profit family is red when profit is negative (found ${redCards})`);
 
   // exports + JSON
   const csv = await get("/api/export/sales?period=last_30");
