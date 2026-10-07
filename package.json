@@ -15,6 +15,7 @@
     "test:smoke": "node --env-file=.env.local tests/smoke.e2e.mjs"
   },
   "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.25",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-query": "^5.104.1",

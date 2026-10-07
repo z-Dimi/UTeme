@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/ui/logo";
+import { ProfileDropdown } from "@/components/ui/profile-dropdown";
 import { logout } from "@/features/auth/actions";
 import { switchProject } from "@/features/onboarding/switch-project";
 import { formatCompactCurrency, formatCurrency, formatPercent } from "@/lib/formatting";
@@ -13,7 +14,7 @@ import { NAV_ITEMS } from "./nav";
 
 export type SidebarProps = {
   unread: number;
-  user: { fullName: string; avatarUrl: string | null };
+  user: { fullName: string; email: string; avatarUrl: string | null };
   goal: { currentCents: number; goalCents: number };
   projects: { id: string; name: string }[];
   activeProjectId: string;
@@ -79,29 +80,7 @@ function ProfileFooter({ user, projects, activeProjectId }: Pick<SidebarProps, "
         </form>
       ) : null}
 
-      <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card p-1.5">
-        <Link
-          href="/profile"
-          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 transition-colors hover:bg-card-hover"
-          aria-label="Editar perfil"
-        >
-          <Avatar src={user.avatarUrl} size={34} />
-          <span className="min-w-0">
-            <span className="block truncate text-[13px] font-medium">{user.fullName}</span>
-            {user.avatarUrl ? null : <span className="block text-[11px] text-info">Editar perfil</span>}
-          </span>
-        </Link>
-        <form action={logout}>
-          <button
-            type="submit"
-            aria-label="Sair"
-            title="Sair"
-            className="grid h-8 w-8 place-items-center rounded-md text-muted transition-colors hover:bg-card-hover hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4" aria-hidden />
-          </button>
-        </form>
-      </div>
+      <ProfileDropdown data={{ name: user.fullName, email: user.email, avatarUrl: user.avatarUrl }} />
     </div>
   );
 }

@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const shell = {
     unread: unread ?? 0,
-    user: { fullName: workspace.user.fullName, avatarUrl: workspace.user.avatarUrl },
+    user: { fullName: workspace.user.fullName, email: workspace.user.email, avatarUrl: workspace.user.avatarUrl },
     goal: { currentCents: Number(gross ?? 0), goalCents: workspace.activeProject.revenueGoalCents },
     projects: workspace.projects.map((p) => ({ id: p.id, name: p.name })),
     activeProjectId: projectId,
