@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { disconnectMeta, selectMetaTargets } from "@/features/meta/actions";
 import { ImportProgress } from "@/features/meta/import-progress";
+import { TokenForm } from "@/features/meta/token-form";
 import { createClient } from "@/lib/supabase/server";
 import { connectionToken, getProjectConnection, listAdAccounts, listPixels } from "@/server/meta/connection";
 import { MetaApiError } from "@/server/meta/graph";
@@ -107,6 +108,8 @@ export default async function MetaIntegrationPage({
           )}
         </section>
       ) : null}
+
+      {!connected && canManage ? <TokenForm /> : null}
 
       {connected && !selected ? (
         <section className="space-y-4 rounded-xl border border-border bg-card p-4">

@@ -7,6 +7,8 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { connectionToken, getProjectConnection, listAdAccounts, listPixels } from "@/server/meta/connection";
 import { MetaApiError } from "@/server/meta/graph";
+import { fetchMe } from "@/server/meta/oauth";
+import { saveMetaConnection } from "@/server/meta/save-connection";
 import { runBackfill, runIncrementalSync } from "@/server/meta/sync";
 import { getWorkspace } from "@/server/services/workspace";
 
@@ -140,6 +142,46 @@ export async function disconnectMeta(formData: FormData) {
     target_type: "meta_connection",
     metadata: {},
   });
+  revalidatePath("/", "layout");
+  redirect("/integrations/meta");
+}
+
+const tokenSchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .min(40, "Token muito curto")
+    .max(1000, "Token muito longo")
+    .regex(/^[A-Za-z0-9_\-|.]+$/, "O token contém caracteres inválidos"),
+});
+
+/**
+ * Connects with a System User access token generated in Meta Business Settings (no login dialog, no
+ * app review, does not expire like a user token). The token is validated by actually listing the
+ * ad accounts it can read, then stored encrypted.
+ */
+export async function connectWithToken(_: { error?: string }, formData: FormData): Promise<{ error?: string }> {
+  const parsed = tokenSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Token inválido" };
+
+  const workspace = await getWorkspace();
+  if (!MANAGE_ROLES.includes(workspace.activeOrganization.role)) return { error: "Apenas proprietários e administradores podem conectar a Meta." };
+
+  const token = parsed.data.token;
+  let me;
+  try {
+    me = await fetchMe(token);
+    const accounts = await listAdAccounts(token);
+    if (accounts.length === 0) {
+      return { error: "O token é válido, mas não enxerga nenhuma conta de anúncios. Atribua a conta ao Usuário do Sistema e marque a permissão ads_read." };
+    }
+  } catch (e) {
+    if (e instanceof MetaApiError && e.isAuthError) return { error: "A Meta rejeitou o token (inválido ou expirado)." };
+    console.error("[meta] token validation failed", { code: e instanceof MetaApiError ? e.code : undefined });
+    return { error: e instanceof MetaApiError ? `Meta: ${e.message}` : "Não foi possível validar o token." };
+  }
+
+  await saveMetaConnection(workspace, { accessToken: token, expiresAt: null, scopes: ["ads_read"], me, method: "system_user_token" });
   revalidatePath("/", "layout");
   redirect("/integrations/meta");
 }
