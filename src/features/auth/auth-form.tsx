@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { Field, Input } from "@/components/ui/input";
 import type { FormState } from "./actions";
 
@@ -28,6 +29,7 @@ export function AuthForm({
 
   return (
     <div className="w-full max-w-sm space-y-6">
+      <Logo height={28} priority className="mb-2" />
       <div className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {subtitle ? <p className="text-muted">{subtitle}</p> : null}

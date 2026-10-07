@@ -31,7 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar orgName={workspace.activeOrganization.name} />
+      <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar workspace={workspace} unread={unread ?? 0} metaSync={metaSync} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>

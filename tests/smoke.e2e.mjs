@@ -164,6 +164,16 @@ try {
   assert.equal(st.status, 200);
   assert.equal(JSON.parse(st.text).backfill_status, "done");
 
+  // branding: logo in the sidebar (and not the organization name there), on the login page, plus favicon
+  assert.ok(summary.includes('alt="UTeme"'), "sidebar shows the UTeme logo");
+  const login = await fetch(`${BASE_URL}/login`).then((r) => r.text());
+  assert.ok(login.includes('alt="UTeme"'), "login shows the UTeme logo");
+  const icon = await fetch(`${BASE_URL}/icon.png`);
+  assert.equal(icon.status, 200);
+  assert.ok((icon.headers.get("content-type") ?? "").includes("image/png"));
+  const logoFile = await fetch(`${BASE_URL}/uteme-logo.png`);
+  assert.equal(logoFile.status, 200);
+
   // unauthenticated access is bounced to login
   const anon = await fetch(`${BASE_URL}/`, { redirect: "manual" });
   assert.equal(anon.status, 307);

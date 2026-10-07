@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
 
-export function Sidebar({ orgName }: { orgName: string }) {
+export function Sidebar() {
   const pathname = usePathname();
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
-      <div className="flex h-12 items-center gap-2 border-b border-border px-4">
-        <div className="grid h-6 w-6 place-items-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
-          R
-        </div>
-        <span className="truncate text-[13px] font-semibold">{orgName}</span>
+      <div className="flex h-12 items-center border-b border-border px-4">
+        <Link href="/" aria-label="UTeme, página inicial">
+          <Logo height={18} priority />
+        </Link>
       </div>
 
       <nav aria-label="Principal" className="flex-1 space-y-0.5 overflow-y-auto p-2">
