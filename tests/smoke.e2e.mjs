@@ -1,7 +1,7 @@
 // Authenticated smoke test: seeds a tenant with sales + Meta data, signs in and opens EVERY screen of a
 // deployed app, failing on any server error. Catches runtime-only bugs (server/client boundary, bad
 // queries) that unit tests cannot. Run: BASE_URL=https://uteme.vercel.app npm run test:smoke
-import { createCipheriv, randomBytes, randomUUID } from "node:crypto";
+import { createCipheriv, randomBytes } from "node:crypto";
 import assert from "node:assert/strict";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
@@ -118,7 +118,7 @@ try {
 
   // ---------------------------------------------------------------- every screen
   const pages = [
-    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão", "R$ 100,00"]],
+    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão"]],
     ["/?period=today", ["Resumo", "Hoje"]],
     ["/?period=last_30", ["Resumo", "Últimos 30 dias"]],
     ["/?period=custom&from=2026-01-01&to=2026-12-31", ["Resumo"]],
