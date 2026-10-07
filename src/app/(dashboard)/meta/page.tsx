@@ -98,7 +98,7 @@ export default async function MetaPage({
   const sp = await searchParams;
   const workspace = await getWorkspace();
   const tz = workspace.activeProject.timezone;
-  const preset: Preset = isPreset(sp.period) ? sp.period : "last_7";
+  const preset: Preset = isPreset(sp.period) ? sp.period : "today";
   const period = resolvePeriod({ preset, tz, customFrom: sp.from, customTo: sp.to });
   const sort: SortKey = SORT_KEYS.includes(sp.sort as SortKey) ? (sp.sort as SortKey) : "spend";
   const dir = sp.dir === "asc" ? "asc" : "desc";
@@ -122,13 +122,8 @@ export default async function MetaPage({
   );
 
   const header = (
-    <header className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">Meta Ads</h2>
-        <p className="text-xs text-muted">
-          {period.label} · {ymd(period.from, tz)} a {ymd(lastDay, tz)}
-        </p>
-      </div>
+    <header className="flex flex-wrap items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold tracking-tight">Meta Ads</h2>
       {filter}
     </header>
   );

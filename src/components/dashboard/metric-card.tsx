@@ -21,7 +21,9 @@ export function MetricCard({
   loading?: boolean;
 }) {
   return (
-    <div className="group relative rounded-xl border border-border bg-card p-3.5 transition-colors duration-150 hover:border-border-hover hover:bg-card-hover">
+    // The grid stretches every card to the tallest one in its row; centering keeps cards without a
+    // detail line visually balanced instead of top-heavy.
+    <div className="group relative flex flex-col justify-center rounded-xl border border-border bg-card p-3.5 transition-colors duration-150 hover:border-border-hover hover:bg-card-hover">
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-xs text-muted">{label}</p>
         <span tabIndex={0} aria-label={`Como é calculado: ${formula}`} className="text-muted/60 outline-none focus-visible:text-foreground">

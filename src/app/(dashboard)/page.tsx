@@ -40,7 +40,7 @@ export default async function SummaryPage({
   const sp = await searchParams;
   const workspace = await getWorkspace();
   const tz = workspace.activeProject.timezone;
-  const preset: Preset = isPreset(sp.period) ? sp.period : "last_7";
+  const preset: Preset = isPreset(sp.period) ? sp.period : "today";
   const period = resolvePeriod({ preset, tz, customFrom: sp.from, customTo: sp.to });
 
   // Meta numbers come from our synced tables. Not connected = unavailable (null), never zero.
@@ -100,13 +100,8 @@ export default async function SummaryPage({
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Resumo</h2>
-          <p className="text-xs text-muted">
-            {period.label} · {ymd(period.from, tz)} a {ymd(lastDay, tz)} · fuso {tz}
-          </p>
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">Resumo</h2>
         {filter}
       </header>
 

@@ -146,11 +146,13 @@ try {
     for (const needle of expected) assert.ok(r.text.includes(needle), `${path} should contain "${needle}"`);
   }
 
-  // numbers on the summary: spend 2 days x R$100 = R$200 in the default 7-day window, Meta tax 12.15% = R$24,30
+  // default period is "Hoje": today spend R$100, Meta tax 12.15% = R$12,15, ROAS Meta = 500 / 100
   const summary = (await get("/")).text;
-  assert.ok(summary.includes("R$ 200,00"), "summary shows ad spend");
-  assert.ok(summary.includes("R$ 24,30"), "summary applies Meta ads tax to spend");
-  assert.ok(summary.includes("ROAS Meta 5,00"), "ROAS Meta = 1000 / 200");
+  assert.ok(summary.includes("R$ 100,00"), "summary shows today ad spend");
+  assert.ok(summary.includes("R$ 12,15"), "summary applies Meta ads tax to spend");
+  assert.ok(summary.includes("ROAS Meta 5,00"), "ROAS Meta = 500 / 100");
+  assert.ok(!summary.includes("fuso America/Sao_Paulo"), "no timezone caption under the title");
+  assert.ok(/aria-expanded="false"[^>]*>Hoje/.test(summary) || summary.includes(">Hoje<"), "default period is Hoje");
   // Seeded operation loses money: profit, ROAS, ROI and margin all share the same (red) result color.
   const redCards = (summary.match(/tracking-tight text-danger/g) ?? []).length;
   assert.ok(redCards >= 4, `profit family is red when profit is negative (found ${redCards})`);

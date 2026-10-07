@@ -114,7 +114,8 @@ export function resolvePeriod(args: {
       if (from && to && at(from) <= at(to)) {
         return { preset, from: at(from), to: at(addDays(to, 1)), label };
       }
-      return resolvePeriod({ preset: "last_7", tz, now });
+      // Invalid custom range: fall back to the default period of the app.
+      return resolvePeriod({ preset: "today", tz, now });
     }
   }
 }

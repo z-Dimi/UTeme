@@ -44,7 +44,7 @@ describe("resolvePeriod", () => {
     const p = resolvePeriod({ preset: "custom", tz: TZ, now, customFrom: "2026-05-01", customTo: "2026-05-31" });
     expect(p.from.toISOString()).toBe("2026-05-01T03:00:00.000Z");
     expect(p.to.toISOString()).toBe("2026-06-01T03:00:00.000Z");
-    expect(resolvePeriod({ preset: "custom", tz: TZ, now, customFrom: "x", customTo: "y" }).preset).toBe("last_7");
-    expect(resolvePeriod({ preset: "custom", tz: TZ, now, customFrom: "2026-02-30", customTo: "2026-03-01" }).preset).toBe("last_7");
+    expect(resolvePeriod({ preset: "custom", tz: TZ, now, customFrom: "x", customTo: "y" }).preset).toBe("today");
+    expect(resolvePeriod({ preset: "custom", tz: TZ, now, customFrom: "2026-02-30", customTo: "2026-03-01" }).preset).toBe("today");
   });
 });
