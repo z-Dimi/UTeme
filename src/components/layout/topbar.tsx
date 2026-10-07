@@ -1,11 +1,22 @@
 import { Bell, LogOut } from "lucide-react";
 import Link from "next/link";
 import { logout } from "@/features/auth/actions";
+import { RefreshButton } from "@/features/meta/refresh-button";
 import { switchProject } from "@/features/onboarding/switch-project";
 import { Button } from "@/components/ui/button";
 import type { Workspace } from "@/server/services/workspace";
 
-export function Topbar({ workspace, unread }: { workspace: Workspace; unread: number }) {
+export type MetaSyncStatus = { state: "none" | "importing" | "ready"; label: string; error: boolean };
+
+export function Topbar({
+  workspace,
+  unread,
+  metaSync,
+}: {
+  workspace: Workspace;
+  unread: number;
+  metaSync: MetaSyncStatus;
+}) {
   const { projects, activeProject, activeOrganization, user } = workspace;
 
   return (
@@ -16,10 +27,14 @@ export function Topbar({ workspace, unread }: { workspace: Workspace; unread: nu
           <span className="px-1.5 text-muted">/</span>
           {activeProject.name}
         </h1>
-        <span className="hidden items-center gap-1.5 text-xs text-muted sm:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-muted" aria-hidden />
-          Sem fontes conectadas
-        </span>
+        {metaSync.state === "ready" ? (
+          <RefreshButton lastSyncLabel={metaSync.error ? "Falha na última atualização" : metaSync.label} />
+        ) : (
+          <span className="hidden items-center gap-1.5 text-xs text-muted sm:flex">
+            <span className={`h-1.5 w-1.5 rounded-full ${metaSync.state === "importing" ? "animate-pulse bg-info" : "bg-muted"}`} aria-hidden />
+            {metaSync.label}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

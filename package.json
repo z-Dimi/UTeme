@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:rls": "node --env-file=.env.local tests/rls.integration.mjs",
-    "test:e2e": "node --env-file=.env.local tests/webhook.e2e.mjs"
+    "test:e2e": "node --env-file=.env.local tests/webhook.e2e.mjs",
+    "test:integration": "node --env-file=.env.local node_modules/vitest/vitest.mjs run --config vitest.integration.config.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

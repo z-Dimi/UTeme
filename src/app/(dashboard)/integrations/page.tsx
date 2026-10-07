@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CreateIntegrationForm } from "@/features/integrations/create-form";
 import { setIntegrationStatus } from "@/features/integrations/actions";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,12 @@ export default async function IntegrationsPage() {
     .eq("project_id", workspace.activeProject.id)
     .order("created_at", { ascending: false });
 
+  const { data: metaConn } = await supabase
+    .from("meta_connections")
+    .select("status, ad_account_name, pixel_id, last_sync_at")
+    .eq("project_id", workspace.activeProject.id)
+    .maybeSingle();
+
   const appUrl = process.env.APP_URL ?? "";
   const canManage = ["owner", "admin"].includes(workspace.activeOrganization.role);
 
@@ -36,6 +43,31 @@ export default async function IntegrationsPage() {
         <p className="text-muted">Conecte a plataforma de vendas que envia os pedidos para este projeto.</p>
       </header>
 
+      <section aria-label="Advertising" className="space-y-2">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Anúncios</h3>
+        <Link
+          href="/integrations/meta"
+          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-border-hover hover:bg-card-hover"
+        >
+          <div>
+            <p className="text-[13px] font-medium">Meta Ads</p>
+            <p className="text-xs text-muted">
+              {metaConn?.status === "connected"
+                ? metaConn.ad_account_name
+                  ? `${metaConn.ad_account_name} · Pixel ${metaConn.pixel_id ?? "—"} · última sincronização ${ago(metaConn.last_sync_at)}`
+                  : "Conectado. Selecione a conta de anúncios para concluir."
+                : "Sincronize campanhas, anúncios, investimento e conversões."}
+            </p>
+          </div>
+          <span
+            className={`rounded px-1.5 py-0.5 text-[11px] ${metaConn?.status === "connected" ? "bg-success/10 text-success" : "bg-surface text-muted"}`}
+          >
+            {metaConn?.status === "connected" ? "Conectado" : "Conectar"}
+          </span>
+        </Link>
+      </section>
+
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Vendas</h3>
       {canManage ? <CreateIntegrationForm appUrl={appUrl} /> : null}
 
       <section aria-label="Integrações de vendas" className="overflow-hidden rounded-xl border border-border bg-card">

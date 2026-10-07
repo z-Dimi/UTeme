@@ -108,3 +108,13 @@ export function getMetricColor(semantic: MetricSemantic): string {
       return "text-muted";
   }
 }
+
+/** "agora", "há 4 min", "há 3 h", "há 2 d". `now` is injected so it stays pure/testable. */
+export function formatRelativeTime(iso: string | null | undefined, now: Date): string {
+  if (!iso) return UNAVAILABLE;
+  const diffMin = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60000));
+  if (diffMin < 1) return "agora";
+  if (diffMin < 60) return `há ${diffMin} min`;
+  if (diffMin < 1440) return `há ${Math.round(diffMin / 60)} h`;
+  return `há ${Math.round(diffMin / 1440)} d`;
+}

@@ -74,3 +74,16 @@ describe("delta semantics honour metric direction", () => {
     expect(getDeltaSemantic(0.5, "neutral")).toBe("neutral");
   });
 });
+
+import { formatRelativeTime } from "./index";
+
+describe("formatRelativeTime", () => {
+  const now = new Date("2026-06-01T12:00:00Z");
+  it("formats ranges", () => {
+    expect(formatRelativeTime("2026-06-01T11:59:40Z", now)).toBe("agora");
+    expect(formatRelativeTime("2026-06-01T11:56:00Z", now)).toBe("há 4 min");
+    expect(formatRelativeTime("2026-06-01T09:00:00Z", now)).toBe("há 3 h");
+    expect(formatRelativeTime("2026-05-30T12:00:00Z", now)).toBe("há 2 d");
+    expect(formatRelativeTime(null, now)).toBe("—");
+  });
+});

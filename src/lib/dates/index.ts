@@ -24,7 +24,9 @@ export const PRESET_LABEL: Record<Preset, string> = {
   custom: "Personalizado",
 };
 
-type Ymd = { y: number; m: number; d: number };
+export type Ymd = { y: number; m: number; d: number };
+
+export const formatYmd = ({ y, m, d }: Ymd) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 function tzOffsetMs(utcMs: number, tz: string): number {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -56,7 +58,7 @@ export function todayInTz(now: Date, tz: string): Ymd {
   return { y: get("year"), m: get("month"), d: get("day") };
 }
 
-function addDays({ y, m, d }: Ymd, n: number): Ymd {
+export function addDays({ y, m, d }: Ymd, n: number): Ymd {
   const dt = new Date(Date.UTC(y, m - 1, d + n));
   return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
 }

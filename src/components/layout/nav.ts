@@ -22,7 +22,7 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Resumo", href: "/", icon: LayoutDashboard },
-  { label: "Meta Ads", href: "/meta", icon: BarChart3, soon: true },
+  { label: "Meta Ads", href: "/meta", icon: BarChart3 },
   { label: "Vendas", href: "/sales", icon: ShoppingCart },
   { label: "Integrações", href: "/integrations", icon: Plug },
   { label: "Taxas", href: "/fees", icon: Receipt },

@@ -15,6 +15,8 @@ import {
 import { isPreset, resolvePeriod, type Preset } from "@/lib/dates";
 import { FunnelCard } from "@/features/funnel/funnel-card";
 import { getConversionFunnel } from "@/lib/funnel";
+import { calculateCPA } from "@/lib/finance";
+import { getMetaPeriod } from "@/server/services/meta-summary";
 import { getSummary } from "@/server/services/summary";
 import { getWorkspace } from "@/server/services/workspace";
 
@@ -34,8 +36,17 @@ export default async function SummaryPage({
   const preset: Preset = isPreset(sp.period) ? sp.period : "last_7";
   const period = resolvePeriod({ preset, tz, customFrom: sp.from, customTo: sp.to });
 
-  // Meta Ads is not connected yet: spend is "unavailable", not zero.
-  const result = await getSummary({ projectId: workspace.activeProject.id, period, adSpend: null, metaAdsTax: null, tz });
+  // Meta numbers come from our synced tables. Not connected = unavailable (null), never zero.
+  const meta = await getMetaPeriod({ projectId: workspace.activeProject.id, period, tz });
+  const ready = meta.state === "ready" ? meta : null;
+  const importing = meta.state === "importing";
+  const result = await getSummary({
+    projectId: workspace.activeProject.id,
+    period,
+    adSpend: ready ? ready.totals.spend : null,
+    metaAdsTax: ready ? ready.metaAdsTax : null,
+    tz,
+  });
 
   const lastDay = new Date(period.to.getTime() - 1);
   const filter = (
@@ -79,10 +90,25 @@ export default async function SummaryPage({
           ou escolha outro período.
         </div>
       ) : null}
-      {s.adSpend === null ? (
+      {importing ? (
+        <div role="status" className="rounded-xl border border-border bg-card p-4 text-muted">
+          Sincronizando os dados da Meta… Gastos, ROAS, lucro e ROI aparecem assim que a importação terminar.{" "}
+          <Link href="/integrations/meta" className="text-info hover:underline">
+            Ver progresso
+          </Link>
+        </div>
+      ) : s.adSpend === null ? (
         <div className="rounded-xl border border-border bg-card p-4 text-muted">
-          Nenhuma conta Meta conectada. Gastos, ROAS, lucro, ROI e margem aparecem como {UNAVAILABLE} até a conexão,
-          para não superestimar o resultado.
+          Nenhuma conta Meta conectada.{" "}
+          <Link href="/integrations/meta" className="text-info hover:underline">
+            Conecte para começar
+          </Link>
+          . Gastos, ROAS, lucro, ROI e margem aparecem como {UNAVAILABLE} até a conexão, para não superestimar o resultado.
+        </div>
+      ) : null}
+      {ready?.hasError ? (
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger/5 p-3 text-xs text-danger">
+          Não foi possível atualizar os dados da Meta. Os números abaixo são da última sincronização bem-sucedida.
         </div>
       ) : null}
 
@@ -96,25 +122,31 @@ export default async function SummaryPage({
         <MetricCard
           label="Gastos com anúncios"
           value={s.adSpend === null ? UNAVAILABLE : formatCurrency(s.adSpend)}
+          loading={importing}
           formula={`Soma do investimento (spend) da Meta Ads no período. ${s.adSpend === null ? noAds : ""}`}
         />
         <MetricCard
           label="ROAS"
           value={s.roas === null ? UNAVAILABLE : formatNumber(s.roas, 2)}
-          formula={adsFormula("Receita aprovada (após reembolsos e chargebacks) ÷ investimento em anúncios.")}
+          loading={importing}
+          formula={adsFormula("Receita aprovada (após reembolsos e chargebacks) ÷ investimento em anúncios (ROAS Cash). O ROAS Meta usa o valor de compra atribuído pela Meta.")}
+          sub={ready && ready.totals.spend > 0 ? `ROAS Meta ${formatNumber(ready.totals.purchaseValue / ready.totals.spend, 2)}` : undefined}
         />
         <MetricCard
           label="Lucro"
           value={formatSignedCurrency(s.profit)}
           colorClass={getMetricColor(getMetricSemantic(s.profit))}
+          loading={importing}
           formula={adsFormula("Receita líquida − anúncios − imposto Meta − custos de produto − despesas.")}
           sub={`despesas ${formatCurrency(s.expenses)}`}
         />
 
         <MetricCard
           label="CPA"
-          value={UNAVAILABLE}
-          formula="Investimento ÷ compras atribuídas pela Meta. Requer Meta Ads conectada."
+          value={ready ? formatCurrency(calculateCPA(ready.totals.spend, ready.totals.purchases)) : UNAVAILABLE}
+          loading={importing}
+          formula="Investimento ÷ compras atribuídas pela Meta (CPA Meta). Sem compras no período, fica indisponível."
+          sub={ready ? `${formatNumber(ready.totals.purchases)} compras Meta` : undefined}
         />
         <MetricCard
           label="Vendas Pendentes"
@@ -126,6 +158,7 @@ export default async function SummaryPage({
           label="ROI"
           value={formatSignedNumber(s.roi)}
           colorClass={getMetricColor(getMetricSemantic(s.roi))}
+          loading={importing}
           formula={adsFormula("Lucro ÷ custos totais (anúncios + imposto Meta + taxas + impostos + custos de produto + despesas).")}
         />
         <MetricCard
@@ -137,6 +170,7 @@ export default async function SummaryPage({
         <MetricCard
           label="Imposto Meta Ads"
           value={s.metaAdsTax === null ? UNAVAILABLE : formatCurrency(s.metaAdsTax)}
+          loading={importing}
           formula={`Percentual configurado em Taxas aplicado sobre o investimento em anúncios, não sobre o faturamento. ${s.adSpend === null ? noAds : ""}`}
         />
         <MetricCard
@@ -150,6 +184,7 @@ export default async function SummaryPage({
           label="Margem"
           value={s.margin === null ? UNAVAILABLE : formatSignedPercent(s.margin)}
           colorClass={getMetricColor(getMetricSemantic(s.margin))}
+          loading={importing}
           formula={adsFormula("Lucro ÷ receita líquida.")}
         />
         <MetricCard
@@ -160,7 +195,19 @@ export default async function SummaryPage({
         />
       </section>
 
-      <FunnelCard stages={getConversionFunnel(null, s.approvedOrders)} />
+      <FunnelCard
+        stages={getConversionFunnel(
+          ready
+            ? {
+                clicks: ready.totals.linkClicks,
+                landingPageViews: ready.totals.landingPageViews,
+                initiateCheckouts: ready.totals.initiateCheckouts,
+                metaPurchases: ready.totals.purchases,
+              }
+            : null,
+          s.approvedOrders,
+        )}
+      />
 
       <section aria-label="Resultado por horário" className="rounded-xl border border-border bg-card p-4">
         <div className="mb-2 flex items-baseline justify-between gap-2">
