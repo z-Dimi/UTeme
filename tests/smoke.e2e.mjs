@@ -153,6 +153,9 @@ try {
   assert.ok(summary.includes("ROAS Meta 5,00"), "ROAS Meta = 500 / 100");
   assert.ok(!summary.includes("fuso America/Sao_Paulo"), "no timezone caption under the title");
   assert.ok(/aria-expanded="false"[^>]*>Hoje/.test(summary) || summary.includes(">Hoje<"), "default period is Hoje");
+  // formula tooltips are tied to the (i) icon only, not to the whole card
+  assert.ok(summary.includes("group-hover/info:block"), "tooltip shows on the info icon");
+  assert.ok(!/group-hover:block/.test(summary), "no card-wide hover tooltip");
   // Seeded operation loses money: profit, ROAS, ROI and margin all share the same (red) result color.
   const redCards = (summary.match(/tracking-tight text-danger/g) ?? []).length;
   assert.ok(redCards >= 4, `profit family is red when profit is negative (found ${redCards})`);

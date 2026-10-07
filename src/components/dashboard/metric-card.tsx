@@ -23,11 +23,24 @@ export function MetricCard({
   return (
     // The grid stretches every card to the tallest one in its row; centering keeps cards without a
     // detail line visually balanced instead of top-heavy.
-    <div className="group relative flex flex-col justify-center rounded-xl border border-border bg-card p-3.5 transition-colors duration-150 hover:border-border-hover hover:bg-card-hover">
+    <div className="relative flex flex-col justify-center rounded-xl border border-border bg-card p-3.5 transition-colors duration-150 hover:border-border-hover hover:bg-card-hover">
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-xs text-muted">{label}</p>
-        <span tabIndex={0} aria-label={`Como é calculado: ${formula}`} className="text-muted/60 outline-none focus-visible:text-foreground">
-          <Info className="h-3.5 w-3.5" aria-hidden />
+        {/* The formula appears only while the pointer is over the "i" (or it has keyboard focus), never for the whole card. */}
+        <span className="group/info relative">
+          <span
+            tabIndex={0}
+            aria-label={`Como é calculado: ${formula}`}
+            className="block cursor-help rounded text-muted/60 outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
+          >
+            <Info className="h-3.5 w-3.5" aria-hidden />
+          </span>
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 hidden w-56 rounded-lg border border-border-hover bg-surface p-2.5 text-[11px] font-normal leading-snug text-muted shadow-lg group-focus-within/info:block group-hover/info:block"
+          >
+            {formula}
+          </span>
         </span>
       </div>
       {loading ? (
@@ -36,12 +49,6 @@ export function MetricCard({
         <p className={cn("mt-1.5 text-xl font-semibold tabular-nums tracking-tight", colorClass)}>{value}</p>
       )}
       {sub ? <p className="mt-0.5 text-[11px] text-muted">{sub}</p> : null}
-      <div
-        role="tooltip"
-        className="pointer-events-none absolute right-2 top-9 z-10 hidden w-56 rounded-lg border border-border-hover bg-surface p-2.5 text-[11px] leading-snug text-muted shadow-lg group-focus-within:block group-hover:block"
-      >
-        {formula}
-      </div>
     </div>
   );
 }
