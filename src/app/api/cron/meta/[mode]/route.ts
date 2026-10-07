@@ -6,7 +6,7 @@ import { CONNECTION_COLUMNS, runIncrementalSync, type MetaConnection } from "@/s
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const MODES = { recent: "recent", reconcile: "reconcile", deep: "deep" } as const;
+const MODES = { live: "live", recent: "recent", reconcile: "reconcile", deep: "deep" } as const;
 
 function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET;

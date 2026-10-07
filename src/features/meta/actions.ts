@@ -13,7 +13,8 @@ import { runBackfill, runIncrementalSync } from "@/server/meta/sync";
 import { getWorkspace } from "@/server/services/workspace";
 
 const MANAGE_ROLES = ["owner", "admin"];
-const MANUAL_COOLDOWN_MS = 60_000;
+const MANUAL_COOLDOWN_MS = 15_000;
+const AUTO_COOLDOWN_MS = 50_000;
 
 const selectSchema = z.object({
   account: z.string().regex(/^act_\d+$/),
@@ -91,8 +92,13 @@ export async function selectMetaTargets(formData: FormData) {
   redirect("/integrations/meta");
 }
 
-/** Manual "Atualizar": re-syncs today + yesterday. Cooldown prevents spam against Meta's rate limits. */
-export async function refreshMeta(): Promise<{ error?: string; ok?: boolean }> {
+export type RefreshResult = { error?: string; ok?: boolean; /** Another refresh ran very recently; nothing to do. */ skipped?: boolean };
+
+/**
+ * Runs a sync for the active project, at most once per cooldown window no matter how many tabs, users
+ * or double-clicks ask (the slot is claimed atomically BEFORE calling Meta, protecting its rate limits).
+ */
+async function claimAndSync(mode: "recent" | "live", cooldownMs: number): Promise<RefreshResult> {
   const workspace = await getWorkspace();
   const conn = await getProjectConnection(workspace.activeProject.id);
   if (!conn || conn.status !== "connected" || !conn.ad_account_id || conn.backfill_status !== "done") {
@@ -100,28 +106,33 @@ export async function refreshMeta(): Promise<{ error?: string; ok?: boolean }> {
   }
 
   const db = createAdminClient();
-  const { data: row } = await db.from("meta_connections").select("last_manual_sync_at").eq("id", conn.id).single();
-  const last = row?.last_manual_sync_at ? new Date(row.last_manual_sync_at).getTime() : 0;
-  if (Date.now() - last < MANUAL_COOLDOWN_MS) {
-    return { error: "Aguarde um minuto antes de atualizar novamente." };
-  }
-  // Claim the slot first so concurrent clicks cannot all pass the cooldown check.
   const { data: claimed } = await db
     .from("meta_connections")
     .update({ last_manual_sync_at: new Date().toISOString() })
     .eq("id", conn.id)
-    .or(`last_manual_sync_at.is.null,last_manual_sync_at.lt.${new Date(Date.now() - MANUAL_COOLDOWN_MS).toISOString()}`)
+    .or(`last_manual_sync_at.is.null,last_manual_sync_at.lt.${new Date(Date.now() - cooldownMs).toISOString()}`)
     .select("id");
-  if (!claimed?.length) return { error: "Aguarde um minuto antes de atualizar novamente." };
+  if (!claimed?.length) return { skipped: true };
 
   try {
-    await runIncrementalSync(db, conn, "recent");
+    await runIncrementalSync(db, conn, mode);
   } catch (e) {
     const detail = e instanceof MetaApiError && e.isAuthError ? "A conexão com a Meta expirou. Reconecte em Integrações." : "Não foi possível atualizar os dados da Meta.";
     return { error: detail };
   }
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/** Button "Atualizar": today + yesterday + campaign/ad names. */
+export async function refreshMeta(): Promise<RefreshResult> {
+  const res = await claimAndSync("recent", MANUAL_COOLDOWN_MS);
+  return res.skipped ? { error: "Aguarde alguns segundos antes de atualizar novamente." } : res;
+}
+
+/** Automatic refresh (about every minute while the dashboard is open): today only, one lightweight call. */
+export async function autoRefreshMeta(): Promise<RefreshResult> {
+  return claimAndSync("live", AUTO_COOLDOWN_MS);
 }
 
 export async function disconnectMeta(formData: FormData) {

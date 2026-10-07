@@ -228,6 +228,44 @@ describe("meta sync engine", () => {
     expect(attempts).toBe(2);
   });
 
+  it("live mode: one light insights call for today, no structure calls, no sync_runs row on success", async () => {
+    await db.from("meta_connections").update({ status: "connected" }).eq("id", connId);
+    const runsBefore = (await db.from("sync_runs").select("id", { count: "exact", head: true }).eq("project_id", projectId)).count;
+    calls.length = 0;
+    const range: { since: string; until: string }[] = [];
+    graph((url) => {
+      if (url.pathname.endsWith("/insights")) {
+        range.push(JSON.parse(url.searchParams.get("time_range")!));
+        return { data: [insightRow(range[0].until, "a1", "250.00", "7", "1400.00")] };
+      }
+      return { data: [] };
+    });
+
+    await runIncrementalSync(db, await loadConn(), "live");
+
+    expect(calls.filter((u) => /\/(campaigns|adsets|ads)$/.test(u.pathname))).toHaveLength(0);
+    expect(calls.filter((u) => u.pathname.endsWith("/insights"))).toHaveLength(1);
+    // today in the account timezone; the first hours after midnight also re-read yesterday
+    const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "numeric", hourCycle: "h23" }).format(new Date()));
+    const spanDays = (Date.parse(range[0].until) - Date.parse(range[0].since)) / 86400000;
+    expect(spanDays).toBe(hour < 3 ? 1 : 0);
+
+    const { data: today } = await db.from("meta_metrics_daily").select("spend, meta_purchases").eq("project_id", projectId).eq("date", range[0].until).eq("ad_id", "a1").single();
+    expect(today).toEqual({ spend: 25000, meta_purchases: 7 });
+    const runsAfter = (await db.from("sync_runs").select("id", { count: "exact", head: true }).eq("project_id", projectId)).count;
+    expect(runsAfter).toBe(runsBefore);
+    expect((await loadConn()).status).toBe("connected");
+  });
+
+  it("live mode failures are recorded (even though successes are not)", async () => {
+    const before = (await db.from("sync_runs").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("type", "live").eq("status", "failed")).count ?? 0;
+    graph(() => ({ error: { message: "boom", code: 100 } }));
+    await expect(runIncrementalSync(db, await loadConn(), "live")).rejects.toThrow();
+    const after = (await db.from("sync_runs").select("id", { count: "exact", head: true }).eq("project_id", projectId).eq("type", "live").eq("status", "failed")).count ?? 0;
+    expect(after).toBe(before + 1);
+    await db.from("meta_connections").update({ status: "connected", last_error: null }).eq("id", connId);
+  });
+
   it("system user tokens: finds accounts on assigned_ad_accounts when me/adaccounts is empty", async () => {
     const account = { id: "act_999", account_id: "999", name: "Conta SU", currency: "BRL", timezone_name: "America/Sao_Paulo", account_status: 1 };
     graph((url) => {

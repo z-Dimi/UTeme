@@ -1,16 +1,54 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { refreshMeta } from "./actions";
+import { autoRefreshMeta, refreshMeta } from "./actions";
 
-/** White "Atualizar" button placed beside the period filter. The last sync time is its tooltip. */
+const AUTO_INTERVAL_MS = 60_000;
+
+/**
+ * White "Atualizar" button beside the period filter, plus the automatic refresh: while this page is open
+ * and visible, ad spend (and therefore ROAS) is re-synced about once a minute. The server enforces the
+ * cooldown, so several tabs or users never multiply the calls to Meta.
+ */
 export function RefreshButton({ lastSyncLabel }: { lastSyncLabel: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const busy = useRef(false);
+
+  const auto = useCallback(async () => {
+    if (busy.current || document.visibilityState !== "visible") return;
+    busy.current = true;
+    try {
+      const res = await autoRefreshMeta();
+      if (res.ok) {
+        setMessage(null);
+        router.refresh();
+      } else if (res.error) {
+        setMessage(res.error);
+      }
+    } catch {
+      // network hiccup: the next tick tries again
+    } finally {
+      busy.current = false;
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const id = setInterval(auto, AUTO_INTERVAL_MS);
+    // Coming back to the tab after a while: catch up immediately instead of waiting for the next tick.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void auto();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [auto]);
 
   return (
     <div className="flex items-center gap-2">
@@ -19,7 +57,7 @@ export function RefreshButton({ lastSyncLabel }: { lastSyncLabel: string }) {
         variant="light"
         size="sm"
         disabled={pending}
-        title={lastSyncLabel}
+        title={`${lastSyncLabel} · atualiza sozinho a cada minuto`}
         aria-label={`Atualizar dados da Meta. ${lastSyncLabel}`}
         onClick={() =>
           start(async () => {

@@ -36,7 +36,8 @@ token, campanhas, conjuntos, anúncios e métricas daquele usuário Meta (pedido
 
 | Modo | Janela | Gatilho |
 | --- | --- | --- |
-| recent | hoje + ontem | botão Atualizar (cooldown 60 s) ou `GET /api/cron/meta/recent` |
+| live | só hoje (nas primeiras 3 h do dia também ontem) | **automático a cada ~60 s** enquanto o Resumo/Meta Ads estiver aberto e visível; `GET /api/cron/meta/live` para agendador externo. Uma chamada leve, sem estrutura; só deixa registro em `sync_runs` se falhar |
+| recent | hoje + ontem + nomes de campanhas/anúncios | botão Atualizar (cooldown 15 s) ou `GET /api/cron/meta/recent` |
 | reconcile | 7 dias | `GET /api/cron/meta/reconcile` |
 | deep | 30 dias | `GET /api/cron/meta/deep` |
 
