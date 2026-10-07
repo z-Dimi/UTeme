@@ -91,13 +91,14 @@ export function Sidebar(props: SidebarProps) {
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
-      <div className="flex h-16 items-center justify-center border-b border-border px-4">
+      {/* Logo band: same height as the page header band (88px) so the two dividers line up. */}
+      <div className="flex h-22 shrink-0 items-center justify-center border-b border-border px-4">
         <Link href="/" aria-label="UTeme, página inicial">
-          <Logo height={26} priority />
+          <Logo height={34} priority />
         </Link>
       </div>
 
-      <nav aria-label="Principal" className="space-y-0.5 overflow-y-auto p-2">
+      <nav aria-label="Principal" className="space-y-0.5 overflow-y-auto px-2 pb-2 pt-4">
         {NAV_ITEMS.map(({ label, href, icon: Icon, soon }) => {
           const active = isActive(pathname, href);
           const base = "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] transition-colors duration-150";

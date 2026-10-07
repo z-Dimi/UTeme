@@ -67,6 +67,38 @@ body {
   border-color: var(--border);
 }
 
+/*
+ * Page header band (desktop): the first <header> of every page is a full-width band as tall as the sidebar
+ * logo band (88px = h-22) with a divider, so both dividers sit on the same line, plus room below it.
+ * The negative margins cancel the main area's padding so the band touches the top and the sides.
+ */
+@media (min-width: 768px) {
+  .app-main > div > header:first-child {
+    position: relative;
+    min-height: 5.5rem;
+    margin: -1.5rem 0 1.5rem;
+  }
+  /* headers that are flex rows (title left, controls right) vs. plain stacked blocks */
+  .app-main > div > header.flex:first-child {
+    align-items: center;
+  }
+  .app-main > div > header:first-child:not(.flex) {
+    display: grid;
+    align-content: center;
+  }
+  /* The divider spans the whole content width even on pages that use a narrow centered column. */
+  .app-main > div > header:first-child::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: -100vw;
+    right: -100vw;
+    height: 1px;
+    background: var(--border);
+    pointer-events: none;
+  }
+}
+
 /* Dropdown menus: short fade + rise, nothing flashy (150 ms). */
 @keyframes menu-in {
   from {
