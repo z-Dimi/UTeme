@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { encryptSecret } from "@/lib/crypto";
+import { lookupAdAccounts } from "@/server/meta/connection";
 import { CONNECTION_COLUMNS, runBackfill, runIncrementalSync, type MetaConnection } from "@/server/meta/sync";
 
 /**
@@ -225,6 +226,33 @@ describe("meta sync engine", () => {
     });
     await runIncrementalSync(db, await loadConn(), "recent");
     expect(attempts).toBe(2);
+  });
+
+  it("system user tokens: finds accounts on assigned_ad_accounts when me/adaccounts is empty", async () => {
+    const account = { id: "act_999", account_id: "999", name: "Conta SU", currency: "BRL", timezone_name: "America/Sao_Paulo", account_status: 1 };
+    graph((url) => {
+      if (url.pathname.endsWith("/me/adaccounts")) return { data: [] };
+      if (url.pathname.endsWith("/me/assigned_ad_accounts")) return { data: [account] };
+      return { data: [] };
+    });
+    const found = await lookupAdAccounts("FAKE");
+    expect(found.accounts.map((a) => a.id)).toEqual(["act_999"]);
+    expect(found.tried).toEqual([
+      { edge: "me/adaccounts", count: 0 },
+      { edge: "me/assigned_ad_accounts", count: 1 },
+    ]);
+  });
+
+  it("reports why when no edge returns accounts (diagnostic, not a silent empty list)", async () => {
+    graph((url) =>
+      url.pathname.endsWith("/me/assigned_ad_accounts")
+        ? { error: { message: "(#200) Permissions error", code: 200 } }
+        : { data: [] },
+    );
+    const found = await lookupAdAccounts("FAKE");
+    expect(found.accounts).toEqual([]);
+    expect(found.tried[0]).toEqual({ edge: "me/adaccounts", count: 0 });
+    expect(found.tried[1].error).toContain("Permissions error");
   });
 
   it("RLS: another org cannot read these metrics", async () => {

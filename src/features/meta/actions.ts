@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { connectionToken, getProjectConnection, listAdAccounts, listPixels } from "@/server/meta/connection";
+import { connectionToken, getProjectConnection, listAdAccounts, listPixels, lookupAdAccounts } from "@/server/meta/connection";
 import { MetaApiError } from "@/server/meta/graph";
 import { fetchMe } from "@/server/meta/oauth";
 import { saveMetaConnection } from "@/server/meta/save-connection";
@@ -171,9 +171,12 @@ export async function connectWithToken(_: { error?: string }, formData: FormData
   let me;
   try {
     me = await fetchMe(token);
-    const accounts = await listAdAccounts(token);
+    const { accounts, tried } = await lookupAdAccounts(token);
     if (accounts.length === 0) {
-      return { error: "O token é válido, mas não enxerga nenhuma conta de anúncios. Atribua a conta ao Usuário do Sistema e marque a permissão ads_read." };
+      const detail = tried.map((t) => `${t.edge}: ${t.error ?? `${t.count} conta(s)`}`).join(" · ");
+      return {
+        error: `O token é válido (usuário ${me.name ?? me.id}), mas não enxerga nenhuma conta de anúncios. Atribua a conta de anúncios a este Usuário do Sistema (Atribuir ativos → Contas de anúncios) e gere o token de novo. Diagnóstico: ${detail}`,
+      };
     }
   } catch (e) {
     if (e instanceof MetaApiError && e.isAuthError) return { error: "A Meta rejeitou o token (inválido ou expirado)." };
