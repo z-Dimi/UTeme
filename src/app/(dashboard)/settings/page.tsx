@@ -37,6 +37,7 @@ export default async function SettingsPage() {
         <ProjectForm
           name={workspace.activeProject.name}
           timezone={workspace.activeProject.timezone}
+          goal={new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2 }).format(workspace.activeProject.revenueGoalCents / 100)}
           canEdit={canEdit}
         />
         <p className="text-xs text-muted">Moeda: {workspace.activeProject.currency}. Outras moedas ainda não estão disponíveis.</p>

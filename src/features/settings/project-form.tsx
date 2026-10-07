@@ -19,7 +19,18 @@ const TIMEZONES = [
   "UTC",
 ];
 
-export function ProjectForm({ name, timezone, canEdit }: { name: string; timezone: string; canEdit: boolean }) {
+export function ProjectForm({
+  name,
+  timezone,
+  goal,
+  canEdit,
+}: {
+  name: string;
+  timezone: string;
+  /** Revenue goal formatted for the input, e.g. "1.000.000,00". */
+  goal: string;
+  canEdit: boolean;
+}) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(updateProject, {});
   const zones = TIMEZONES.includes(timezone) ? TIMEZONES : [timezone, ...TIMEZONES];
   return (
@@ -43,8 +54,13 @@ export function ProjectForm({ name, timezone, canEdit }: { name: string; timezon
           </select>
         </Field>
       </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Meta de faturamento bruto (R$)" error={state.fieldErrors?.goal}>
+          <Input name="goal" defaultValue={goal} inputMode="decimal" disabled={!canEdit} required />
+        </Field>
+      </div>
       <p className="text-xs text-muted">
-        O fuso define o que é “hoje” e “ontem” nos filtros e os horários exibidos. Os timestamps continuam guardados em UTC.
+        A meta aparece no menu lateral e conta o faturamento bruto acumulado de todas as vendas aprovadas. O fuso define o que é “hoje” e “ontem” nos filtros e os horários exibidos. Os timestamps continuam guardados em UTC.
       </p>
       {state.error ? <p role="alert" className="text-xs text-danger">{state.error}</p> : null}
       {state.ok ? <p role="status" className="text-xs text-success">Salvo.</p> : null}

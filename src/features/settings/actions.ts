@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { parseBRLToCents } from "@/lib/money";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWorkspace } from "@/server/services/workspace";
 
@@ -17,6 +18,7 @@ const schema = z.object({
       return false;
     }
   }, "Fuso horário inválido"),
+  goal: z.string().trim().min(1, "Informe a meta"),
 });
 
 export async function updateProject(_: SettingsState, formData: FormData): Promise<SettingsState> {
@@ -26,6 +28,9 @@ export async function updateProject(_: SettingsState, formData: FormData): Promi
     for (const i of parsed.error.issues) fieldErrors[String(i.path[0])] ??= i.message;
     return { fieldErrors };
   }
+  const goalCents = parseBRLToCents(parsed.data.goal);
+  if (goalCents === null || goalCents <= 0) return { fieldErrors: { goal: "Valor inválido" } };
+
   const workspace = await getWorkspace();
   if (!["owner", "admin"].includes(workspace.activeOrganization.role)) {
     return { error: "Você não tem permissão para alterar o projeto." };
@@ -34,7 +39,7 @@ export async function updateProject(_: SettingsState, formData: FormData): Promi
   const db = createAdminClient();
   const { error } = await db
     .from("projects")
-    .update({ name: parsed.data.name, timezone: parsed.data.timezone })
+    .update({ name: parsed.data.name, timezone: parsed.data.timezone, revenue_goal_cents: goalCents })
     .eq("id", workspace.activeProject.id)
     .eq("organization_id", workspace.activeOrganization.id);
   if (error) return { error: "Não foi possível salvar." };

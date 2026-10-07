@@ -6,11 +6,21 @@ import { createClient } from "@/lib/supabase/server";
 
 export const ACTIVE_PROJECT_COOKIE = "active_project";
 
+type ProjectInfo = {
+  id: string;
+  name: string;
+  organizationId: string;
+  timezone: string;
+  currency: string;
+  /** Gross revenue goal in cents. */
+  revenueGoalCents: number;
+};
+
 export type Workspace = {
-  user: { id: string; email: string; fullName: string };
+  user: { id: string; email: string; fullName: string; avatarUrl: string | null };
   organizations: { id: string; name: string; role: string }[];
-  projects: { id: string; name: string; organizationId: string; timezone: string; currency: string }[];
-  activeProject: { id: string; name: string; organizationId: string; timezone: string; currency: string };
+  projects: ProjectInfo[];
+  activeProject: ProjectInfo;
   activeOrganization: { id: string; name: string; role: string };
 };
 
@@ -28,8 +38,8 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
 
   const [{ data: members }, { data: projects }, { data: profile }] = await Promise.all([
     supabase.from("organization_members").select("role, organizations(id, name)").eq("user_id", user.id),
-    supabase.from("projects").select("id, name, organization_id, timezone, currency").order("created_at"),
-    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+    supabase.from("projects").select("id, name, organization_id, timezone, currency, revenue_goal_cents").order("created_at"),
+    supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle(),
   ]);
 
   const organizations = (members ?? []).flatMap((m) => {
@@ -42,6 +52,7 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
     organizationId: p.organization_id,
     timezone: p.timezone,
     currency: p.currency,
+    revenueGoalCents: Number(p.revenue_goal_cents),
   }));
 
   if (organizations.length === 0 || projectList.length === 0) redirect("/onboarding");
@@ -55,6 +66,7 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
       id: user.id,
       email: user.email ?? "",
       fullName: profile?.full_name ?? user.email ?? "",
+      avatarUrl: profile?.avatar_url ?? null,
     },
     organizations,
     projects: projectList,

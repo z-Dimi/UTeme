@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { PRESET_LABEL, type Period, type Preset } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -10,11 +11,14 @@ export function PeriodFilter({
   defaultFrom,
   defaultTo,
   basePath = "/",
+  trailing,
 }: {
   period: Period;
   defaultFrom: string;
   defaultTo: string;
   basePath?: string;
+  /** Rendered right after the "Aplicar" button (e.g. the refresh button). */
+  trailing?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -44,6 +48,7 @@ export function PeriodFilter({
           Aplicar
         </button>
       </form>
+      {trailing}
     </div>
   );
 }

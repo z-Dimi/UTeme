@@ -118,3 +118,14 @@ export function formatRelativeTime(iso: string | null | undefined, now: Date): s
   if (diffMin < 1440) return `há ${Math.round(diffMin / 60)} h`;
   return `há ${Math.round(diffMin / 1440)} d`;
 }
+
+/** Compact money for goals: R$ 0, R$ 250 mil, R$ 1,5 mi, R$ 1 mi. `cents` is integer minor units. */
+export function formatCompactCurrency(cents: Nullable): string {
+  if (!isAvailable(cents)) return UNAVAILABLE;
+  const reais = Math.abs(cents) / 100;
+  const sign = cents < 0 ? "-" : "";
+  const fmt = (n: number) => formatNumber(Math.round(n * 10) / 10, Number.isInteger(Math.round(n * 10) / 10) ? 0 : 1);
+  if (reais >= 1_000_000) return `${sign}R$ ${fmt(reais / 1_000_000)} mi`;
+  if (reais >= 1_000) return `${sign}R$ ${fmt(reais / 1_000)} mil`;
+  return `${sign}${formatCurrency(Math.abs(cents))}`;
+}

@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { refreshMeta } from "./actions";
 
+/** White "Atualizar" button placed beside the period filter. The last sync time is its tooltip. */
 export function RefreshButton({ lastSyncLabel }: { lastSyncLabel: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -13,12 +14,13 @@ export function RefreshButton({ lastSyncLabel }: { lastSyncLabel: string }) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="hidden text-xs text-muted sm:inline">{message ?? lastSyncLabel}</span>
       <Button
         type="button"
-        variant="secondary"
+        variant="light"
         size="sm"
         disabled={pending}
+        title={lastSyncLabel}
+        aria-label={`Atualizar dados da Meta. ${lastSyncLabel}`}
         onClick={() =>
           start(async () => {
             const res = await refreshMeta();
@@ -30,6 +32,11 @@ export function RefreshButton({ lastSyncLabel }: { lastSyncLabel: string }) {
         {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <RefreshCw className="h-3.5 w-3.5" aria-hidden />}
         Atualizar
       </Button>
+      {message ? (
+        <span role="alert" className="text-xs text-danger">
+          {message}
+        </span>
+      ) : null}
     </div>
   );
 }

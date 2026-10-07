@@ -118,7 +118,8 @@ try {
 
   // ---------------------------------------------------------------- every screen
   const pages = [
-    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão", "Produtos", "Produto Smoke"]],
+    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão", "Produtos", "Produto Smoke", "Meta de faturamento", "R$ 394,00", "R$ 1 mi", "Editar perfil", "Atualizar", "Sair"]],
+    ["/profile", ["Editar perfil", "Foto de perfil"]],
     ["/?period=today", ["Resumo", "Hoje"]],
     ["/?period=last_30", ["Resumo", "Últimos 30 dias"]],
     ["/?period=custom&from=2026-01-01&to=2026-12-31", ["Resumo"]],
@@ -136,7 +137,7 @@ try {
     ["/integrations/meta", ["Conta Smoke", "Pixel Smoke"]],
     ["/notifications", ["Webhook com erro"]],
     ["/reports", ["Relatórios", "CSV"]],
-    ["/settings", ["Configurações", "Smoke Project"]],
+    ["/settings", ["Configurações", "Smoke Project", "Meta de faturamento bruto", "1.000.000,00"]],
   ];
   for (const [path, expected] of pages) {
     const r = await get(path);
@@ -166,6 +167,7 @@ try {
 
   // branding: logo in the sidebar (and not the organization name there), on the login page, plus favicon
   assert.ok(summary.includes('alt="UTeme"'), "sidebar shows the UTeme logo");
+  assert.ok(!summary.includes("Smoke Org"), "organization name no longer shown in the sidebar header");
   const login = await fetch(`${BASE_URL}/login`).then((r) => r.text());
   assert.ok(login.includes('alt="UTeme"'), "login shows the UTeme logo");
   const icon = await fetch(`${BASE_URL}/icon.png`);
@@ -173,6 +175,12 @@ try {
   assert.ok((icon.headers.get("content-type") ?? "").includes("image/png"));
   const logoFile = await fetch(`${BASE_URL}/uteme-logo.png`);
   assert.equal(logoFile.status, 200);
+
+  // profile photos bucket: public read, size/type limited, no client write policies
+  const bucket = must(await db.storage.getBucket("avatars"), "avatars bucket");
+  assert.equal(bucket.public, true);
+  assert.equal(bucket.file_size_limit, 2097152);
+  assert.deepEqual([...bucket.allowed_mime_types].sort(), ["image/jpeg", "image/png", "image/webp"]);
 
   // unauthenticated access is bounced to login
   const anon = await fetch(`${BASE_URL}/`, { redirect: "manual" });

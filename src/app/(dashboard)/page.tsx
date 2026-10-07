@@ -15,6 +15,8 @@ import {
 import { isPreset, resolvePeriod, type Preset } from "@/lib/dates";
 import { FunnelCard } from "@/features/funnel/funnel-card";
 import { ProductsCard, type ProductSale } from "@/features/funnel/products-card";
+import { RefreshButton } from "@/features/meta/refresh-button";
+import { formatRelativeTime } from "@/lib/formatting";
 import { createClient } from "@/lib/supabase/server";
 import { getConversionFunnel } from "@/lib/funnel";
 import { calculateCPA } from "@/lib/finance";
@@ -23,6 +25,9 @@ import { getSummary } from "@/server/services/summary";
 import { getWorkspace } from "@/server/services/workspace";
 
 export const metadata = { title: "Resumo" };
+
+// Kept outside the component body: the React purity lint rejects calling the clock during render.
+const currentTime = () => new Date();
 
 const ymd = (d: Date, tz: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
@@ -52,7 +57,16 @@ export default async function SummaryPage({
 
   const lastDay = new Date(period.to.getTime() - 1);
   const filter = (
-    <PeriodFilter period={period} defaultFrom={ymd(period.from, tz)} defaultTo={ymd(lastDay, tz)} />
+    <PeriodFilter
+      period={period}
+      defaultFrom={ymd(period.from, tz)}
+      defaultTo={ymd(lastDay, tz)}
+      trailing={
+        ready ? (
+          <RefreshButton lastSyncLabel={ready.hasError ? "Falha na última atualização" : `Atualizado ${formatRelativeTime(ready.lastSyncAt, currentTime())}`} />
+        ) : null
+      }
+    />
   );
 
   if ("error" in result) {

@@ -87,3 +87,15 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime(null, now)).toBe("—");
   });
 });
+
+import { formatCompactCurrency } from "./index";
+
+describe("formatCompactCurrency", () => {
+  it("compacts goals", () => {
+    expect(formatCompactCurrency(0)).toBe("R$ 0,00");
+    expect(formatCompactCurrency(100000000)).toBe("R$ 1 mi");
+    expect(formatCompactCurrency(150000000)).toBe("R$ 1,5 mi");
+    expect(formatCompactCurrency(25000000)).toBe("R$ 250 mil");
+    expect(formatCompactCurrency(null)).toBe("—");
+  });
+});

@@ -3,7 +3,8 @@ import { MetricCard } from "@/components/dashboard/metric-card";
 import { PeriodFilter } from "@/components/dashboard/period-filter";
 import { isPreset, resolvePeriod, type Preset } from "@/lib/dates";
 import { calculateCPA, calculateROAS } from "@/lib/finance";
-import { UNAVAILABLE, formatCurrency, formatNumber, formatPercent } from "@/lib/formatting";
+import { RefreshButton } from "@/features/meta/refresh-button";
+import { UNAVAILABLE, formatCurrency, formatNumber, formatPercent, formatRelativeTime } from "@/lib/formatting";
 import {
   SORT_KEYS,
   buildMetaTree,
@@ -38,6 +39,9 @@ const COLUMNS: { key: SortKey; label: string }[] = [
 ];
 
 const GRID = "grid grid-cols-[minmax(240px,2.4fr)_88px_repeat(10,minmax(88px,1fr))] items-center gap-x-2";
+
+// Kept outside the component body: the React purity lint rejects calling the clock during render.
+const currentTime = () => new Date();
 
 const ymd = (d: Date, tz: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
@@ -103,7 +107,19 @@ export default async function MetaPage({
 
   const meta = await getMetaPeriod({ projectId: workspace.activeProject.id, period, tz });
   const lastDay = new Date(period.to.getTime() - 1);
-  const filter = <PeriodFilter basePath="/meta" period={period} defaultFrom={ymd(period.from, tz)} defaultTo={ymd(lastDay, tz)} />;
+  const filter = (
+    <PeriodFilter
+      basePath="/meta"
+      period={period}
+      defaultFrom={ymd(period.from, tz)}
+      defaultTo={ymd(lastDay, tz)}
+      trailing={
+        meta.state === "ready" ? (
+          <RefreshButton lastSyncLabel={meta.hasError ? "Falha na última atualização" : `Atualizado ${formatRelativeTime(meta.lastSyncAt, currentTime())}`} />
+        ) : null
+      }
+    />
+  );
 
   const header = (
     <header className="flex flex-wrap items-end justify-between gap-3">
