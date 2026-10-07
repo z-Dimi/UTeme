@@ -22,6 +22,7 @@ export function HourlyChart({ data }: { data: HourlyDatum[] }) {
             cursor={{ fill: "rgba(255,255,255,0.04)" }}
             contentStyle={{ background: "#111318", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: "#8b919c" }}
+            itemStyle={{ color: "#ffffff" }}
             formatter={(value, _name, item) => [
               formatSignedCurrency(Number(value)),
               `${(item.payload as HourlyDatum).orders} venda(s)`,
