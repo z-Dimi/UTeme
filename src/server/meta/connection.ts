@@ -23,7 +23,7 @@ export function connectionToken(conn: MetaConnection): string | null {
 export function listAdAccounts(token: string) {
   return graphGetAll<MetaAdAccount>(
     "me/adaccounts",
-    { fields: "id,account_id,name,currency,timezone_name,account_status,business{id,name}", limit: 100 },
+    { fields: "id,account_id,name,currency,timezone_name,account_status", limit: 100 },
     token,
     10,
   );

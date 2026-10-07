@@ -18,7 +18,7 @@ const ERRORS: Record<string, string> = {
   denied: "Você cancelou a autorização na Meta.",
   oauth: "A Meta retornou um erro durante o login.",
   state: "A sessão de login expirou ou é inválida. Tente conectar novamente.",
-  permissions: "Aceite todas as permissões solicitadas (anúncios e negócios) para continuar.",
+  permissions: "Aceite a permissão de leitura de anúncios (ads_read) para continuar.",
   exchange: "Não foi possível concluir a conexão com a Meta. Tente novamente.",
   invalid: "Seleção inválida.",
   not_connected: "Conecte a Meta antes de selecionar a conta.",
@@ -94,7 +94,7 @@ export default async function MetaIntegrationPage({
       {!connected ? (
         <section className="space-y-3 rounded-xl border border-border bg-card p-6 text-center">
           <h3 className="text-[13px] font-semibold">{conn?.status === "disconnected" ? "Meta desconectada" : "Nenhuma conta Meta conectada"}</h3>
-          <p className="text-xs text-muted">Conecte sua conta para começar. Pedimos acesso de leitura aos anúncios e aos negócios.</p>
+          <p className="text-xs text-muted">Conecte sua conta para começar. Pedimos apenas acesso de leitura aos seus anúncios (ads_read).</p>
           {canManage ? (
             <a
               href="/api/meta/connect"

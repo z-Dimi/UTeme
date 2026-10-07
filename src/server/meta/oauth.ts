@@ -1,7 +1,8 @@
 import "server-only";
 import { graphAppGet, graphGet } from "./graph";
 
-export const META_SCOPES = ["ads_read", "business_management"];
+/** Minimum needed to read ad accounts, campaigns, pixels and insights. Add scopes only when a feature needs them. */
+export const META_SCOPES = ["ads_read"];
 
 export function redirectUri() {
   return process.env.META_REDIRECT_URI ?? `${process.env.APP_URL}/api/meta/callback`;

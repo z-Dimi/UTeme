@@ -4,7 +4,7 @@
 
 1. `GET /api/meta/connect` (sessão obrigatória, owner/admin): gera `state` aleatório, grava em cookie httpOnly
    (`state.projectId`, 10 min) e redireciona para `https://www.facebook.com/{versão}/dialog/oauth` com
-   `scope=ads_read,business_management`.
+   `scope=ads_read`.
 2. `GET /api/meta/callback`: confere `state` (tempo constante) e o projeto ativo, troca `code` -> token curto -> token longo
    (~60 dias, `fb_exchange_token`), confere as permissões concedidas e grava o token **cifrado** (AES-GCM).
    A coluna do token não tem `GRANT` para clientes.
