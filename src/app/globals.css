@@ -44,6 +44,7 @@
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-info: var(--info);
+  --color-chart-3: var(--chart-3);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --radius-md: 8px;
   --radius-lg: 10px;

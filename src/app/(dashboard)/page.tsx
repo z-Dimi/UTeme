@@ -15,6 +15,7 @@ import {
 import { isPreset, resolvePeriod, type Preset } from "@/lib/dates";
 import { FunnelCard } from "@/features/funnel/funnel-card";
 import { ProductsCard, type ProductSale } from "@/features/funnel/products-card";
+import { SourcesCard, type SourceSale } from "@/features/funnel/sources-card";
 import { RefreshButton } from "@/features/meta/refresh-button";
 import { formatRelativeTime } from "@/lib/formatting";
 import { createClient } from "@/lib/supabase/server";
@@ -96,6 +97,15 @@ export default async function SummaryPage({
   const products: ProductSale[] = ((productRows ?? []) as { name: string; quantity: number | string }[]).map((r) => ({
     name: r.name,
     quantity: Number(r.quantity),
+  }));
+  const { data: sourceRows } = await supabase.rpc("sales_by_source", {
+    p_project: workspace.activeProject.id,
+    p_from: period.from.toISOString(),
+    p_to: period.to.toISOString(),
+  });
+  const sources: SourceSale[] = ((sourceRows ?? []) as { source: string; orders: number | string }[]).map((r) => ({
+    source: r.source,
+    orders: Number(r.orders),
   }));
 
   return (
@@ -234,7 +244,10 @@ export default async function SummaryPage({
             s.approvedOrders,
           )}
         />
-        <ProductsCard products={products} />
+        <div className="flex min-w-0 flex-col gap-3">
+          <ProductsCard products={products} />
+          <SourcesCard sources={sources} />
+        </div>
       </div>
 
       <section aria-label="Resultado por horário" className="rounded-xl border border-border bg-card p-4">

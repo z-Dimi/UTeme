@@ -160,6 +160,25 @@ try {
   const redCards = (summary.match(/tracking-tight text-danger/g) ?? []).length;
   assert.ok(redCards >= 4, `profit family is red when profit is negative (found ${redCards})`);
 
+  // sales by source: the reported utm_source, normalized (case/space), 'n/a' when absent; refunded sales excluded
+  assert.ok(summary.includes("Vendas por Fonte"), "summary has the sales-by-source card");
+  const extra = [
+    ["IG ", "ex-ig"],
+    ["", "ex-none"],
+    ["www.google.com", "ex-google"],
+  ];
+  for (const [utm, ext] of extra) {
+    must(await db.from("orders").insert({
+      ...scope, provider: "custom", external_order_id: `${ext}-${tag}`, status: "approved", gross_amount: 1000, net_amount: 1000,
+      ordered_at: now.toISOString(), approved_at: now.toISOString(), raw_source: "custom", tracking: utm ? { utm_source: utm } : {},
+    }).select("id").single(), ext);
+  }
+  const { data: bySource } = await db.rpc("sales_by_source", { p_project: projectId, p_from: new Date(now.getTime() - 86400000).toISOString(), p_to: new Date(now.getTime() + 86400000).toISOString() });
+  const counts = Object.fromEntries(bySource.map((r) => [r.source, Number(r.orders)]));
+  assert.deepEqual(counts, { fb: 1, ig: 1, "n/a": 1, "www.google.com": 1 }, "grouped by reported source, 'IG ' normalized, refunded/pending excluded");
+  const withSources = (await get("/")).text;
+  for (const s of ["www.google.com", "N/A", "ig", "fb"]) assert.ok(withSources.includes(s), `source "${s}" is listed`);
+
   // exports + JSON
   const csv = await get("/api/export/sales?period=last_30");
   assert.equal(csv.status, 200);
