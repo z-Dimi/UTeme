@@ -36,8 +36,9 @@ const MENU_ITEMS: MenuItem[] = [
   { label: "Termos e políticas", href: "/politica-privacidade", icon: <FileText className="h-4 w-4" aria-hidden />, external: true },
 ];
 
+// Clean rows: no borders, only a soft background on hover/focus.
 const ITEM =
-  "group flex cursor-pointer items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-[13px] font-medium transition-colors hover:border-border focus:border-border";
+  "group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors hover:bg-card-hover focus:bg-card-hover";
 
 /** Profile card for the bottom of the sidebar. The menu opens upwards. */
 export function ProfileDropdown({ data, className }: { data: ProfileData; className?: string }) {
@@ -91,14 +92,14 @@ export function ProfileDropdown({ data, className }: { data: ProfileData; classN
           )}
         </div>
 
-        <DropdownMenuSeparator className="my-1.5" />
+        <DropdownMenuSeparator className="my-1" />
 
         <form action={logout}>
           {/* preventDefault keeps the menu mounted so the form submit is not cancelled by the close. */}
           <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
             <button
               type="submit"
-              className="group flex w-full cursor-pointer items-center gap-2.5 rounded-lg border border-transparent bg-danger/10 px-2.5 py-2 text-[13px] font-medium text-danger transition-colors hover:border-danger/30 hover:bg-danger/20 focus:border-danger/30"
+              className="group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-danger transition-colors hover:bg-danger/10 focus:bg-danger/10"
             >
               <LogOut className="h-4 w-4" aria-hidden />
               Sair

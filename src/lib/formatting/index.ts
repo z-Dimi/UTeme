@@ -129,3 +129,15 @@ export function formatCompactCurrency(cents: Nullable): string {
   if (reais >= 1_000) return `${sign}R$ ${fmt(reais / 1_000)} mil`;
   return `${sign}${formatCurrency(Math.abs(cents))}`;
 }
+
+/**
+ * Progress toward a goal. Precision grows as the value shrinks so early progress never reads as "0%":
+ * 49,3% / 4,9% / 0,49% / 0,05% / "<0,01%". Exact zero is "0%".
+ */
+export function formatGoalPercent(ratio: Nullable): string {
+  if (!isAvailable(ratio) || ratio <= 0) return "0%";
+  const pct = ratio * 100;
+  if (pct < 0.01) return "<0,01%";
+  const digits = pct >= 10 ? 0 : pct >= 1 ? 1 : 2;
+  return `${formatNumber(pct, digits)}%`;
+}

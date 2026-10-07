@@ -99,3 +99,17 @@ describe("formatCompactCurrency", () => {
     expect(formatCompactCurrency(null)).toBe("—");
   });
 });
+
+import { formatGoalPercent } from "./index";
+
+describe("formatGoalPercent", () => {
+  it("never shows early progress as 0%", () => {
+    expect(formatGoalPercent(0)).toBe("0%");
+    expect(formatGoalPercent(493.16 / 1_000_000 )).toBe("0,05%");
+    expect(formatGoalPercent(0.000001)).toBe("<0,01%");
+    expect(formatGoalPercent(0.049)).toBe("4,9%");
+    expect(formatGoalPercent(0.5)).toBe("50%");
+    expect(formatGoalPercent(1.2)).toBe("120%");
+    expect(formatGoalPercent(null)).toBe("0%");
+  });
+});

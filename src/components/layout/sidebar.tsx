@@ -8,7 +8,7 @@ import { Logo } from "@/components/ui/logo";
 import { ProfileDropdown } from "@/components/ui/profile-dropdown";
 import { logout } from "@/features/auth/actions";
 import { switchProject } from "@/features/onboarding/switch-project";
-import { formatCompactCurrency, formatCurrency, formatPercent } from "@/lib/formatting";
+import { formatCompactCurrency, formatCurrency, formatGoalPercent } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
 
@@ -26,12 +26,13 @@ function isActive(pathname: string, href: string) {
 
 function GoalCard({ currentCents, goalCents }: SidebarProps["goal"]) {
   const ratio = goalCents > 0 ? currentCents / goalCents : 0;
-  const width = Math.min(100, Math.max(0, ratio * 100));
+  // A tiny but non-zero progress still gets a visible sliver (2%) so the bar never looks empty.
+  const width = ratio > 0 ? Math.min(100, Math.max(2, ratio * 100)) : 0;
   return (
     <div className="space-y-2 rounded-xl border border-border bg-card p-3">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-xs font-medium">Meta de faturamento</p>
-        <p className="text-[11px] tabular-nums text-muted">{formatPercent(ratio, 1)}</p>
+        <p className="text-[11px] tabular-nums text-muted">{formatGoalPercent(ratio)}</p>
       </div>
       <div
         role="progressbar"

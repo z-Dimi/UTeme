@@ -118,7 +118,7 @@ try {
 
   // ---------------------------------------------------------------- every screen
   const pages = [
-    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão", "Produtos", "Produto Smoke", "Meta de faturamento", "R$ 394,00", "R$ 1 mi", "Editar perfil", "Atualizar", "Sair"]],
+    ["/", ["Resumo", "Gastos com anúncios", "Funil de Conversão", "Produtos", "Produto Smoke", "Meta de faturamento", "0,04%", "R$ 394,00", "R$ 1 mi", "Editar perfil", "Atualizar", "Sair"]],
     ["/profile", ["Editar perfil", "Foto de perfil"]],
     ["/?period=today", ["Resumo", "Hoje"]],
     ["/?period=last_30", ["Resumo", "Últimos 30 dias"]],
