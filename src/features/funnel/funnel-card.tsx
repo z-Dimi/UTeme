@@ -1,3 +1,7 @@
+"use client";
+
+// Client component on purpose: it hands formatter functions to FunnelChart, and functions cannot
+// cross the server -> client boundary. Props (stages) are plain data.
 import { FunnelChart } from "@/components/ui/funnel-chart";
 import { chartableStages, type FunnelStageData } from "@/lib/funnel";
 import { UNAVAILABLE, formatNumber } from "@/lib/formatting";
